@@ -1,0 +1,8 @@
+[package]
+name = "therml"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ord_subset = "3.1.1"
+wide = "0.7.8"
