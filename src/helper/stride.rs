@@ -1,11 +1,21 @@
-use crate::helper::Shape;
+use std::ops::Index;
+
+use crate::helper::{Shape, Position};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Stride(Box<[usize]>);
 
 impl Stride {
+    pub fn new(data: Box<[usize]>) -> Self {
+        Self(data)
+    }
+
     pub fn as_boxed_slice(&self) -> &Box<[usize]> {
         &self.0
+    }
+
+    pub fn get_index(&self, pos: &Position) -> usize {
+        self.as_boxed_slice().iter().zip(pos.as_boxed_slice().iter()).map(|(s, p)| s * p).sum()
     }
 }
 
@@ -15,8 +25,8 @@ impl From<&[usize]> for Stride {
     }
 }
 
-impl From<Shape> for Stride {
-    fn from(value: Shape) -> Self {
+impl From<&Shape> for Stride {
+    fn from(value: &Shape) -> Self {
         let mut stride: Vec<usize> = Vec::with_capacity(value.as_boxed_slice().len());
 
         let mut next = 1usize;
@@ -28,6 +38,14 @@ impl From<Shape> for Stride {
         stride.reverse();
 
         Stride(stride.into_boxed_slice())
+    }
+}
+
+impl Index<usize> for Stride {
+    type Output = usize;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.0[index]
     }
 }
 
@@ -43,7 +61,7 @@ mod test {
         ];
 
         for (shape, stride) in examples {
-            assert_eq!(Stride::from(shape), stride);
+            assert_eq!(Stride::from(&shape), stride);
         }
     }
 }
