@@ -20,3 +20,7 @@
 
 - Tensors all have an implicit ordering of position indexes which follows the significance from left being most significant and right being least significant
 - Iterators between positions, reshaping all operate on this idea
+
+## ETC
+
+- Maybe engine tensors should be an enum for implementation to allow for cross tensor impl operations
