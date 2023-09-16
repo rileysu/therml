@@ -1,25 +1,28 @@
 use crate::helper::Position;
-use super::EngineTensorAccess;
+use super::{allowed_unit::AllowedUnit, EngineTensor};
 
-pub struct EngineTensorIterator<'a, T: Sized + Copy> {
-    tensor: &'a dyn EngineTensorAccess<T>,
+//TODO basic impl that isn't optimised
+//It can be enhanced by fetching chunks of contig memory if available
+
+pub struct EngineTensorIterator<'a, T: AllowedUnit> {
+    tensor: &'a EngineTensor<T>,
     curr: Position,
     finish: Position,
     ended: bool,
 }
 
-impl<'a, T: Sized + Copy> EngineTensorIterator<'a, T> {
-    pub fn new(tensor: &'a dyn EngineTensorAccess<T>, start: &Position, finish: &Position) -> Self {
+impl<'a, T: AllowedUnit> EngineTensorIterator<'a, T> {
+    pub fn new(tensor: &'a EngineTensor<T>) -> Self {
         Self {
             tensor,
-            curr: start.clone(),
-            finish: finish.clone(),
+            curr: tensor.shape().first(),
+            finish: tensor.shape().last(),
             ended: false,
         }
     }
 }
 
-impl<T: Sized + Copy> Iterator for EngineTensorIterator<'_, T> {
+impl<T: AllowedUnit> Iterator for EngineTensorIterator<'_, T> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {

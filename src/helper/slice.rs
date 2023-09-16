@@ -98,7 +98,12 @@ impl Slice {
     }
 
     pub fn start(&self) -> Position {
-        Position::new(self.as_boxed_slice().iter().map(|i| i.start_index()).collect())
+        Position::new(self.as_boxed_slice().iter().map(|interval| interval.start_index()).collect())
+    }
+
+    //This is called last to differentiate between finish which wouldn't be a valid position
+    pub fn last(&self, shape: &Shape) -> Position {
+        Position::new(self.as_boxed_slice().iter().zip(shape.as_boxed_slice().iter()).map(|(interval, dim)| interval.finish_index(*dim).saturating_sub(1)).collect())
     }
 }
 

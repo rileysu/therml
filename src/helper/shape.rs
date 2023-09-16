@@ -21,6 +21,16 @@ impl Shape {
     pub fn len(&self) -> usize {
         self.0.iter().product()
     }
+
+    //first valid position
+    pub fn first(&self) -> Position {
+        Position::new(vec![0; self.as_boxed_slice().len()].into())
+    }
+
+    //last valid position
+    pub fn last(&self) -> Position {
+        Position::new(self.as_boxed_slice().iter().map(|x| x - 1).collect())
+    }
 }
 
 impl From<&[usize]> for Shape {

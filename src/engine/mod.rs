@@ -1,25 +1,27 @@
-mod tensor;
+pub mod tensor;
+pub mod basic;
+
 mod util;
 
 use crate::helper::Shape;
-use self::tensor::EngineTensor;
+use self::tensor::{EngineTensor, allowed_unit::AllowedUnit};
 use thiserror::Error;
-
-pub struct BasicEngine;
 
 //Using PyTorch operations as a base
 //Using a trait over an enum has little extra cost and allows for extension
 //Engines provide different optimisations for Tensor operations
-pub trait Engine<T: Sized + Copy> {
+//Factory defines the unit as well as output tensor type
+pub trait Engine {
+    type Unit: AllowedUnit;
     //Pointwise Single
-    fn abs(a: &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>;
-    fn neg(a: &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>;
+    fn abs(a: &EngineTensor<Self::Unit>) -> Result<EngineTensor<Self::Unit>, EngineError>;
+    fn neg(a: &EngineTensor<Self::Unit>) -> Result<EngineTensor<Self::Unit>, EngineError>;
     
     //Pointwise Double
-    fn add(a: &EngineTensor<T>, b: &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>;
-    fn sub(a: &EngineTensor<T>, b: &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>;
-    fn mul(a: &EngineTensor<T>, b: &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>;
-    fn div(a: &EngineTensor<T>, b: &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>;
+    fn add(a: &EngineTensor<Self::Unit>, b: &EngineTensor<Self::Unit>) -> Result<EngineTensor<Self::Unit>, EngineError>;
+    fn sub(a: &EngineTensor<Self::Unit>, b: &EngineTensor<Self::Unit>) -> Result<EngineTensor<Self::Unit>, EngineError>;
+    fn mul(a: &EngineTensor<Self::Unit>, b: &EngineTensor<Self::Unit>) -> Result<EngineTensor<Self::Unit>, EngineError>;
+    fn div(a: &EngineTensor<Self::Unit>, b: &EngineTensor<Self::Unit>) -> Result<EngineTensor<Self::Unit>, EngineError>;
 }
 
 #[derive(Error, Debug)]

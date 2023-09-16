@@ -23,4 +23,4 @@
 
 ## ETC
 
-- Maybe engine tensors should be an enum for implementation to allow for cross tensor impl operations
+- Context can have a default engine with which operations will default to and the ability to pass an engine explicitly to change behaviour
