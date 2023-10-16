@@ -36,7 +36,7 @@ impl Position {
         for i in (0..bounds.as_boxed_slice().len()).rev() {
             let signed_bound = bounds[i] as i64;
 
-            curr = self[i] as i64 + curr;
+            curr += self[i] as i64;
             self[i] = curr.rem_euclid(signed_bound) as usize;
             curr = curr.div_euclid(signed_bound);
         }

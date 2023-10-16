@@ -1,19 +1,22 @@
+use num::Signed;
+
 use crate::engine::{Engine, basic::Basic, EngineError};
 
 use super::{EngineTensor, factory::EngineTensorFactory};
 
-impl<E: EngineTensorFactory<Unit = f32>> Engine for Basic<E> {
+impl<E: EngineTensorFactory> Engine for Basic<E> 
+    where E::Unit: Signed {
     type Unit = E::Unit;
 
-    fn abs(a: &EngineTensor<f32>) -> Result<EngineTensor<f32>, crate::engine::EngineError> {
+    fn abs(a: &EngineTensor<Self::Unit>) -> Result<EngineTensor<Self::Unit>, crate::engine::EngineError> {
         Ok(E::from_iter(&mut a.iter().map(|x| x.abs()), a.shape.clone()))
     }
 
-    fn neg(a: &EngineTensor<f32>) -> Result<EngineTensor<f32>, crate::engine::EngineError> {
+    fn neg(a: &EngineTensor<Self::Unit>) -> Result<EngineTensor<Self::Unit>, crate::engine::EngineError> {
         Ok(E::from_iter(&mut a.iter().map(|x| -x), a.shape.clone()))
     }
 
-    fn add(a: &EngineTensor<f32>, b: &EngineTensor<f32>) -> Result<EngineTensor<f32>, crate::engine::EngineError> {
+    fn add(a: &EngineTensor<Self::Unit>, b: &EngineTensor<Self::Unit>) -> Result<EngineTensor<Self::Unit>, crate::engine::EngineError> {
         if a.shape() == b.shape() {
             Ok(E::from_iter(&mut a.iter().zip(b.iter()).map(|(x, y)| x + y), a.shape.clone()))
         } else {
@@ -21,7 +24,7 @@ impl<E: EngineTensorFactory<Unit = f32>> Engine for Basic<E> {
         }
     }
 
-    fn sub(a: &EngineTensor<f32>, b: &EngineTensor<f32>) -> Result<EngineTensor<f32>, crate::engine::EngineError> {
+    fn sub(a: &EngineTensor<Self::Unit>, b: &EngineTensor<Self::Unit>) -> Result<EngineTensor<Self::Unit>, crate::engine::EngineError> {
         if a.shape() == b.shape() {
             Ok(E::from_iter(&mut a.iter().zip(b.iter()).map(|(x, y)| x - y), a.shape.clone()))
         } else {
@@ -29,7 +32,7 @@ impl<E: EngineTensorFactory<Unit = f32>> Engine for Basic<E> {
         }
     }
 
-    fn mul(a: &EngineTensor<f32>, b: &EngineTensor<f32>) -> Result<EngineTensor<f32>, crate::engine::EngineError> {
+    fn mul(a: &EngineTensor<Self::Unit>, b: &EngineTensor<Self::Unit>) -> Result<EngineTensor<Self::Unit>, crate::engine::EngineError> {
         if a.shape() == b.shape() {
             Ok(E::from_iter(&mut a.iter().zip(b.iter()).map(|(x, y)| x * y), a.shape.clone()))
         } else {
@@ -37,7 +40,7 @@ impl<E: EngineTensorFactory<Unit = f32>> Engine for Basic<E> {
         }
     }
 
-    fn div(a: &EngineTensor<f32>, b: &EngineTensor<f32>) -> Result<EngineTensor<f32>, crate::engine::EngineError> {
+    fn div(a: &EngineTensor<Self::Unit>, b: &EngineTensor<Self::Unit>) -> Result<EngineTensor<Self::Unit>, crate::engine::EngineError> {
         if a.shape() == b.shape() {
             Ok(E::from_iter(&mut a.iter().zip(b.iter()).map(|(x, y)| x / y), a.shape.clone()))
         } else {

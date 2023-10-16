@@ -32,7 +32,7 @@ impl From<&Shape> for Stride {
         let mut next = 1usize;
         for dim in value.as_boxed_slice().iter().rev() {
             stride.push(next);
-            next = dim * next;
+            next *= dim;
         }
 
         stride.reverse();

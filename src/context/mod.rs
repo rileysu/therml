@@ -1,37 +1,76 @@
-pub mod tensor;
+use crate::{engine::{tensor::{allowed_unit::AllowedUnit, factory::EngineTensorFactory}, Engine}, helper::{Shape, Slice}};
 
-use crate::engine::{Engine, tensor::allowed_unit::AllowedUnit, EngineError};
+use self::comp_graph::{CompGraph, Node, NodeIndex};
 
-struct Context{
+mod comp_graph;
 
+#[derive(Debug)]
+pub struct Context<T: AllowedUnit> {
+    comp_graph: CompGraph<T>,
 }
 
-struct ContextExecutor<'a, E: Engine> {
-    context: &'a mut Context,
+pub struct ContextTensor {
+    node: NodeIndex,
 }
 
-struct ContextTensor {
-
-}
-
-impl Context {
-    pub fn new() -> Self {
-
-    }
-
-    pub fn new_executor<E: Engine>(&mut self) -> ContextExecutor<E> {
-        ContextExecutor::<E>::new(self)
-    }
-}
-
-impl<E: Engine> ContextExecutor<'_, E> {
-    pub fn new(context: &mut Context) -> Self {
+impl ContextTensor {
+    pub fn new(node: NodeIndex) -> Self {
         Self {
-            context,
+            node,
         }
     }
 
-    pub fn add() -> Result<, EngineError> {
-        
+    pub fn node(&self) -> NodeIndex {
+        self.node
+    }
+}
+
+impl<T: AllowedUnit> Context<T> {
+    pub fn new() -> Self {
+        Self {
+            comp_graph: CompGraph::new(),
+        }
+    }
+
+    pub fn eval(&mut self, tensor: &ContextTensor) {
+        self.comp_graph.populating_eval(tensor.node);
+    }
+
+    pub fn from_iter<E: EngineTensorFactory<Unit = T>>(&mut self, iter: &mut dyn Iterator<Item = T>, shape: Shape) -> ContextTensor {
+        ContextTensor::new(self.comp_graph.create_root(E::from_iter(iter, shape)))
+    }
+
+    pub fn from_slice<E: EngineTensorFactory<Unit = T>>(&mut self, slice: &[T], shape: Shape) -> ContextTensor {
+        ContextTensor::new(self.comp_graph.create_root(E::from_slice(slice, shape)))
+    }
+
+    pub fn iter(&mut self, tensor: &ContextTensor) -> Box<dyn Iterator<Item = T> + '_> {
+        self.eval(tensor);
+
+        Box::from(self.comp_graph.get_node(tensor.node()).unwrap().tensor().unwrap().iter())
+    }
+
+    pub fn abs<E: Engine<Unit = T>>(&mut self, a: &ContextTensor) -> ContextTensor {
+        ContextTensor::new(self.comp_graph.abs::<E>(a.node()))
+    }
+
+    pub fn neg<E: Engine<Unit = T>>(&mut self, a: &ContextTensor) -> ContextTensor {
+        ContextTensor::new(self.comp_graph.neg::<E>(a.node()))
+    }
+
+    pub fn add<E: Engine<Unit = T>>(&mut self, a: &ContextTensor, b: &ContextTensor) -> ContextTensor {
+        ContextTensor::new(self.comp_graph.add::<E>(a.node(), b.node()))
+    }
+
+    pub fn sub<E: Engine<Unit = T>>(&mut self, a: &ContextTensor, b: &ContextTensor) -> ContextTensor {
+        ContextTensor::new(self.comp_graph.sub::<E>(a.node(), b.node()))
+    }
+
+    pub fn mul<E: Engine<Unit = T>>(&mut self, a: &ContextTensor, b: &ContextTensor) -> ContextTensor {
+        ContextTensor::new(self.comp_graph.mul::<E>(a.node(), b.node()))
+    }
+
+    pub fn div<E: Engine<Unit = T>>(&mut self, a: &ContextTensor, b: &ContextTensor) -> ContextTensor {
+        ContextTensor::new(self.comp_graph.div::<E>(a.node(), b.node()))
     }
 }

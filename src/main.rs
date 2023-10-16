@@ -1,17 +1,27 @@
-use crate::{engine::{tensor::{factory::{Array, Quant, EngineTensorFactory}, EngineTensor}, basic::Basic, Engine}, helper::Shape};
+#![allow(dead_code)]
 
-//mod context;
+use context::Context;
+use engine::{tensor::factory::Array, basic::Basic};
+use helper::Shape;
+
+
+
 mod engine;
 mod helper;
 mod context;
 
 fn main() {
-    let a = Array::<f32>::from_slice(&[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0], Shape::new([4, 3].into()));
-    let b = Array::<f32>::from_slice(&[0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0], Shape::new([4, 3].into()));
+    let mut context = Context::new();
 
-    let sum = Basic::<Array<f32>>::add(&a, &b).unwrap();
+    let a = context.from_slice::<Array<i32>>([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].as_slice(), Shape::from([4, 3].as_slice()));
+    let b = context.from_slice::<Array<i32>>([2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13].as_slice(), Shape::from([4, 3].as_slice()));
 
-    let sum_neg = Basic::<Array<f32>>::neg(&sum).unwrap();
+    let mut c = context.add::<Basic<Array<_>>>(&a, &b);
 
-    println!("{:?}", sum_neg);
+    for _ in 0..20 {
+        c = context.div::<Basic<Array<_>>>(&c, &c);
+    }
+
+    println!("{:?}", context.iter(&c).collect::<Vec<i32>>());
+    //println!("{:?}", context);
 }
