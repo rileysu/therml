@@ -1,6 +1,8 @@
-use crate::engine::{tensor::{EngineTensor, allowed_unit::AllowedUnit}, Engine, EngineError};
+use std::collections::{HashSet, HashMap};
 
-pub type NodeIndex = usize;
+use slotmap::{SlotMap, new_key_type};
+
+use crate::engine::{tensor::{EngineTensor, allowed_unit::AllowedUnit, factory::EngineTensorFactory}, Engine, EngineError};
 
 #[derive(Debug)]
 pub struct Node<T: AllowedUnit> {
@@ -41,54 +43,58 @@ impl<T: AllowedUnit> Node<T> {
 pub enum Edge<T: AllowedUnit> {
     Root,
 
-    Abs(NodeIndex, fn(&EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
-    Neg(NodeIndex, fn(&EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
+    Abs(NodeKey, fn(&EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
+    Neg(NodeKey, fn(&EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
 
-    Add(NodeIndex, NodeIndex, fn(&EngineTensor<T>, &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
-    Sub(NodeIndex, NodeIndex, fn(&EngineTensor<T>, &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
-    Mul(NodeIndex, NodeIndex, fn(&EngineTensor<T>, &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
-    Div(NodeIndex, NodeIndex, fn(&EngineTensor<T>, &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
+    Add(NodeKey, NodeKey, fn(&EngineTensor<T>, &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
+    Sub(NodeKey, NodeKey, fn(&EngineTensor<T>, &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
+    Mul(NodeKey, NodeKey, fn(&EngineTensor<T>, &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
+    Div(NodeKey, NodeKey, fn(&EngineTensor<T>, &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
 }
+
+new_key_type! { pub struct NodeKey; }
 
 #[derive(Debug)]
 pub struct CompGraph<T: AllowedUnit> {
-    nodes: Vec<Node<T>>,
+    nodes: SlotMap<NodeKey, Node<T>>,
 }
 
 impl<T: AllowedUnit> CompGraph<T> {
     pub fn new() -> Self {
         Self {
-            nodes: vec![],
+            nodes: SlotMap::with_key(),
         }
     }
 
-    pub fn get_node(&self, node_idx: NodeIndex) -> Option<&Node<T>> {
+    pub fn get_node(&self, node_idx: NodeKey) -> Option<&Node<T>> {
         self.nodes.get(node_idx)
     }
 
-    pub fn get_node_mut(&mut self, node_idx: NodeIndex) -> Option<&mut Node<T>> {
+    pub fn get_node_mut(&mut self, node_idx: NodeKey) -> Option<&mut Node<T>> {
         self.nodes.get_mut(node_idx)
     }
 
     //Root is a node that is a starting point for computation
-    pub fn create_root(&mut self, tensor: EngineTensor<T>) -> NodeIndex {
-        let idx = self.nodes.len();
-
-        self.nodes.push(Node::create_root(tensor));
-
-        idx
+    pub fn create_root(&mut self, tensor: EngineTensor<T>) -> NodeKey {
+        self.nodes.insert(Node::create_root(tensor))
     }
 
-    pub fn create_node(&mut self, edge: Edge<T>) -> NodeIndex {
-        let idx = self.nodes.len();
-
-        self.nodes.push(Node::create_node(edge));
-
-        idx
+    pub fn create_node(&mut self, edge: Edge<T>) -> NodeKey {
+        self.nodes.insert(Node::create_node(edge))
     }
 
     //TODO Fix to handle errors and clean up code
-    pub fn populating_eval(&mut self, target_idx: NodeIndex) {
+    //Kahn's Algorithm
+    pub fn populating_eval(&mut self, target_key: NodeKey) {
+        let open_nodes = HashSet::<NodeKey>::new();
+        let closed_nodes = HashSet::<NodeKey>::new();
+        let nodes_to_child = HashMap::<NodeKey, Vec<NodeKey>>::new();
+
+
+        
+        todo!()
+
+        /*
         let mut to_eval = vec![target_idx];
         let mut discovered = vec![target_idx];
 
@@ -144,30 +150,30 @@ impl<T: AllowedUnit> CompGraph<T> {
                     Err(_) => panic!(),
                 }
             }
-        }
+        }*/
     }
 
-    pub fn abs<E: Engine<Unit = T>>(&mut self, a: NodeIndex) -> NodeIndex {
-        self.create_node(Edge::Abs(a, E::abs))
+    pub fn abs<E: Engine<T>, F: EngineTensorFactory<T>>(&mut self, a: NodeKey) -> NodeKey {
+        self.create_node(Edge::Abs(a, E::abs::<F>))
     }
 
-    pub fn neg<E: Engine<Unit = T>>(&mut self, a: NodeIndex) -> NodeIndex {
-        self.create_node(Edge::Neg(a, E::neg))
+    pub fn neg<E: Engine<T>, F: EngineTensorFactory<T>>(&mut self, a: NodeKey) -> NodeKey {
+        self.create_node(Edge::Neg(a, E::neg::<F>))
     }
 
-    pub fn add<E: Engine<Unit = T>>(&mut self, a: NodeIndex, b: NodeIndex) -> NodeIndex {
-        self.create_node(Edge::Add(a, b, E::add))
+    pub fn add<E: Engine<T>, F: EngineTensorFactory<T>>(&mut self, a: NodeKey, b: NodeKey) -> NodeKey {
+        self.create_node(Edge::Add(a, b, E::add::<F>))
     }
 
-    pub fn sub<E: Engine<Unit = T>>(&mut self, a: NodeIndex, b: NodeIndex) -> NodeIndex {
-        self.create_node(Edge::Sub(a, b, E::sub))
+    pub fn sub<E: Engine<T>, F: EngineTensorFactory<T>>(&mut self, a: NodeKey, b: NodeKey) -> NodeKey {
+        self.create_node(Edge::Sub(a, b, E::sub::<F>))
     }
 
-    pub fn mul<E: Engine<Unit = T>>(&mut self, a: NodeIndex, b: NodeIndex) -> NodeIndex {
-        self.create_node(Edge::Mul(a, b, E::mul))
+    pub fn mul<E: Engine<T>, F: EngineTensorFactory<T>>(&mut self, a: NodeKey, b: NodeKey) -> NodeKey {
+        self.create_node(Edge::Mul(a, b, E::mul::<F>))
     }
 
-    pub fn div<E: Engine<Unit = T>>(&mut self, a: NodeIndex, b: NodeIndex) -> NodeIndex {
-        self.create_node(Edge::Div(a, b, E::div))
+    pub fn div<E: Engine<T>, F: EngineTensorFactory<T>>(&mut self, a: NodeKey, b: NodeKey) -> NodeKey {
+        self.create_node(Edge::Div(a, b, E::div::<F>))
     }
 }

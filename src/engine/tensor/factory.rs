@@ -1,30 +1,22 @@
-use std::{marker::PhantomData, sync::Arc};
+use std::sync::Arc;
 use crate::helper::{Shape, Stride};
 use super::{allowed_unit::{AllowedUnit, AllowedArray, AllowedQuant}, EngineTensor, EngineTensorSpecs};
 
-pub trait EngineTensorFactory
+pub trait EngineTensorFactory<T: AllowedUnit>
 where Self: Sized 
 {
-    type Unit: AllowedUnit;
-
-    fn from_iter(iter: &mut dyn Iterator<Item = Self::Unit>, shape: Shape) -> EngineTensor<Self::Unit>;
-    fn from_slice(data: &[Self::Unit], shape: Shape) -> EngineTensor<Self::Unit>;
+    fn from_iter(iter: &mut dyn Iterator<Item = T>, shape: Shape) -> EngineTensor<T>;
+    fn from_slice(data: &[T], shape: Shape) -> EngineTensor<T>;
 }
 
 #[derive(Debug)]
-pub struct Array<T: AllowedArray> {
-    _phantom: PhantomData<T>,
-}
+pub struct Array {}
 
 #[derive(Debug)]
-pub struct Quant<T: AllowedQuant> {
-    _phantom: PhantomData<T>,
-}
+pub struct Quant {}
 
-impl<T: AllowedArray> EngineTensorFactory for Array<T> {
-    type Unit = T;
-
-    fn from_iter(iter: &mut dyn Iterator<Item = Self::Unit>, shape: Shape) -> EngineTensor<Self::Unit> {
+impl<T: AllowedArray> EngineTensorFactory<T> for Array {
+    fn from_iter(iter: &mut dyn Iterator<Item = T>, shape: Shape) -> EngineTensor<T> {
         EngineTensor {
                 specs: EngineTensorSpecs::Array {
                 data: iter.collect(),
@@ -35,7 +27,7 @@ impl<T: AllowedArray> EngineTensorFactory for Array<T> {
         }
     }
 
-    fn from_slice(data: &[Self::Unit], shape: Shape) -> EngineTensor<Self::Unit> {
+    fn from_slice(data: &[T], shape: Shape) -> EngineTensor<T> {
         EngineTensor {
                 specs: EngineTensorSpecs::Array {
                 data: Arc::from(data),
@@ -47,10 +39,8 @@ impl<T: AllowedArray> EngineTensorFactory for Array<T> {
     }
 }
 
-impl<T: AllowedQuant> EngineTensorFactory for Quant<T> {
-    type Unit = T;
-
-    fn from_iter(iter: &mut dyn Iterator<Item = Self::Unit>, shape: Shape) -> EngineTensor<Self::Unit> {
+impl<T: AllowedQuant> EngineTensorFactory<T> for Quant {
+    fn from_iter(iter: &mut dyn Iterator<Item = T>, shape: Shape) -> EngineTensor<T> {
         EngineTensor {
             specs: EngineTensorSpecs::Quant {
                 data: iter.collect(),
@@ -61,7 +51,7 @@ impl<T: AllowedQuant> EngineTensorFactory for Quant<T> {
         }
     }
 
-    fn from_slice(data: &[Self::Unit], shape: Shape) -> EngineTensor<Self::Unit> {
+    fn from_slice(data: &[T], shape: Shape) -> EngineTensor<T> {
         EngineTensor {
                 specs: EngineTensorSpecs::Quant {
                 data: Arc::from(data),
