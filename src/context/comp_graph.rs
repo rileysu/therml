@@ -5,6 +5,8 @@ use thiserror::Error;
 
 use crate::engine::{tensor::{EngineTensor, allowed_unit::AllowedUnit, factory::EngineTensorFactory}, Engine, EngineError};
 
+use super::edge::Edge;
+
 #[derive(Debug)]
 pub struct Node<T: AllowedUnit> {
     tensor: Option<EngineTensor<T>>,
@@ -44,18 +46,7 @@ impl<T: AllowedUnit> Node<T> {
 }
 
 //Tensor might be able to be combined inside edge so root without a defined tensor isn't possible
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum Edge<T: AllowedUnit> {
-    Root,
 
-    Abs(NodeKey, fn(&EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
-    Neg(NodeKey, fn(&EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
-
-    Add(NodeKey, NodeKey, fn(&EngineTensor<T>, &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
-    Sub(NodeKey, NodeKey, fn(&EngineTensor<T>, &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
-    Mul(NodeKey, NodeKey, fn(&EngineTensor<T>, &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
-    Div(NodeKey, NodeKey, fn(&EngineTensor<T>, &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
-}
 
 new_key_type! { pub struct NodeKey; }
 
@@ -112,7 +103,7 @@ impl<T: AllowedUnit> CompGraph<T> {
         }
     }
 
-    //TODO Fix to handle errors and clean up code
+    //TODO Fix error handling and clean up code
     //Kahn's Algorithm
     pub fn populating_eval(&mut self, target_key: NodeKey) {
         let mut open_nodes = Vec::<NodeKey>::new();

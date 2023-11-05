@@ -1,10 +1,11 @@
 use std::marker::PhantomData;
 
-use crate::{engine::{tensor::{allowed_unit::AllowedUnit, factory::EngineTensorFactory}, Engine}, helper::{Shape, Slice}};
+use crate::{engine::{tensor::{allowed_unit::AllowedUnit, factory::EngineTensorFactory}, Engine}, helper::Shape};
 
-use self::comp_graph::{CompGraph, Node, NodeKey};
+use self::comp_graph::{CompGraph, NodeKey};
 
 mod comp_graph;
+mod edge;
 
 #[derive(Debug)]
 pub struct Context<T: AllowedUnit, E: Engine<T>> {
