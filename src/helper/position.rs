@@ -30,6 +30,8 @@ impl Position {
     }
 
     //Increments or decrements according to the order of positions
+    //Euclidian division is used since we need positive elements in a position
+    //The math works out...
     pub fn incdec_mut(&mut self, bounds: &Shape, off: i64) {
         let mut curr = off;
         

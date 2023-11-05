@@ -25,7 +25,9 @@ pub trait Engine<T: AllowedUnit> {
 
 #[derive(Error, Debug)]
 pub enum EngineError {
-    #[error("the tensor of size {0} does not match {1}")]
-    ShapeMismatch(Shape, Shape)
+    #[error("The tensor of size {0} does not match {1}")]
+    ShapeMismatch(Shape, Shape),
+    #[error("The operation is not supported on this data type")]
+    OperationUnsupportedForType(),
 }
 
