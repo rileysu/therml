@@ -3,7 +3,6 @@ pub mod basic;
 pub mod allowed_unit;
 pub mod factory;
 
-use thiserror::Error;
 use std::sync::Arc;
 use crate::helper::{Shape, Stride, Position, Slice};
 use self::{iter::EngineTensorIterator, allowed_unit::AllowedUnit};
@@ -74,4 +73,11 @@ impl<T: AllowedUnit> EngineTensor<T> {
         todo!()
     }
 }
+
+impl<T: AllowedUnit> PartialEq for EngineTensor<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.shape() == other.shape() && self.iter().zip(other.iter()).all(|(a, b)| a == b)
+    }
+}
+impl<T: AllowedUnit> Eq for EngineTensor<T> {}
 

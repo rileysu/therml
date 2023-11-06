@@ -38,7 +38,7 @@ impl<T: AllowedUnit, E: Engine<T>> Context<T, E> {
     }
 
     pub fn eval(&mut self, tensor: &ContextTensor) {
-        self.comp_graph.populating_eval(tensor.node);
+        self.comp_graph.populating_eval(tensor.node).unwrap();
     }
 
     pub fn from_iter<F: EngineTensorFactory<T>>(&mut self, iter: &mut dyn Iterator<Item = T>, shape: Shape) -> ContextTensor {

@@ -5,7 +5,7 @@ use super::{allowed_unit::{AllowedUnit, AllowedArray, AllowedQuant}, EngineTenso
 pub trait EngineTensorFactory<T: AllowedUnit>
 where Self: Sized 
 {
-    fn from_iter(iter: &mut dyn Iterator<Item = T>, shape: Shape) -> EngineTensor<T>;
+    fn from_iter(iter: impl Iterator<Item = T>, shape: Shape) -> EngineTensor<T>;
     fn from_slice(data: &[T], shape: Shape) -> EngineTensor<T>;
 }
 
@@ -16,7 +16,7 @@ pub struct Array {}
 pub struct Quant {}
 
 impl<T: AllowedArray> EngineTensorFactory<T> for Array {
-    fn from_iter(iter: &mut dyn Iterator<Item = T>, shape: Shape) -> EngineTensor<T> {
+    fn from_iter(iter: impl Iterator<Item = T>, shape: Shape) -> EngineTensor<T> {
         EngineTensor {
                 specs: EngineTensorSpecs::Array {
                 data: iter.collect(),
@@ -40,7 +40,7 @@ impl<T: AllowedArray> EngineTensorFactory<T> for Array {
 }
 
 impl<T: AllowedQuant> EngineTensorFactory<T> for Quant {
-    fn from_iter(iter: &mut dyn Iterator<Item = T>, shape: Shape) -> EngineTensor<T> {
+    fn from_iter(iter: impl Iterator<Item = T>, shape: Shape) -> EngineTensor<T> {
         EngineTensor {
             specs: EngineTensorSpecs::Quant {
                 data: iter.collect(),
