@@ -52,7 +52,7 @@ impl<T: AllowedUnit, E: Engine<T>> Context<T, E> {
     pub fn iter(&mut self, tensor: &ContextTensor) -> Box<dyn Iterator<Item = T> + '_> {
         self.eval(tensor);
 
-        Box::from(self.comp_graph.get_node(tensor.node()).unwrap().tensor().unwrap().iter())
+        Box::from(self.comp_graph.get_node(&tensor.node()).unwrap().tensor().unwrap().iter())
     }
 
     pub fn abs<F: EngineTensorFactory<T>>(&mut self, a: &ContextTensor) -> ContextTensor {
@@ -61,6 +61,30 @@ impl<T: AllowedUnit, E: Engine<T>> Context<T, E> {
 
     pub fn neg<F: EngineTensorFactory<T>>(&mut self, a: &ContextTensor) -> ContextTensor {
         ContextTensor::new(self.comp_graph.neg::<E, F>(a.node()))
+    }
+
+    pub fn add_scalar<F: EngineTensorFactory<T>>(&mut self, s: T, a: &ContextTensor) -> ContextTensor {
+        ContextTensor::new(self.comp_graph.add_scalar::<E, F>(s, a.node()))
+    }
+
+    pub fn sub_scalar_lh<F: EngineTensorFactory<T>>(&mut self, s: T, a: &ContextTensor) -> ContextTensor {
+        ContextTensor::new(self.comp_graph.sub_scalar_lh::<E, F>(s, a.node()))
+    }
+
+    pub fn sub_scalar_rh<F: EngineTensorFactory<T>>(&mut self, a: &ContextTensor, s: T) -> ContextTensor {
+        ContextTensor::new(self.comp_graph.sub_scalar_rh::<E, F>(a.node(), s))
+    }
+
+    pub fn mul_scalar<F: EngineTensorFactory<T>>(&mut self, s: T, a: &ContextTensor) -> ContextTensor {
+        ContextTensor::new(self.comp_graph.mul_scalar::<E, F>(s, a.node()))
+    }
+
+    pub fn div_scalar_lh<F: EngineTensorFactory<T>>(&mut self, s: T, a: &ContextTensor) -> ContextTensor {
+        ContextTensor::new(self.comp_graph.div_scalar_lh::<E, F>(s, a.node()))
+    }
+
+    pub fn div_scalar_rh<F: EngineTensorFactory<T>>(&mut self, a: &ContextTensor, s: T) -> ContextTensor {
+        ContextTensor::new(self.comp_graph.div_scalar_rh::<E, F>(a.node(), s))
     }
 
     pub fn add<F: EngineTensorFactory<T>>(&mut self, a: &ContextTensor, b: &ContextTensor) -> ContextTensor {

@@ -1,6 +1,6 @@
 use crate::engine::{tensor::{allowed_unit::AllowedUnit, EngineTensor}, EngineError};
 
-use super::comp_graph::NodeKey;
+use super::comp_graph::{NodeKey, ComputationGraphError};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Edge<T: AllowedUnit> {
@@ -9,8 +9,110 @@ pub enum Edge<T: AllowedUnit> {
     Abs(NodeKey, fn(&EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
     Neg(NodeKey, fn(&EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
 
+    AddScalar(T, NodeKey, fn(T, &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
+    SubScalarLH(T, NodeKey, fn(T, &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
+    SubScalarRH(NodeKey, T, fn(&EngineTensor<T>, T) -> Result<EngineTensor<T>, EngineError>),
+    MulScalar(T, NodeKey, fn(T, &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
+    DivScalarLH(T, NodeKey, fn(T, &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
+    DivScalarRH(NodeKey, T, fn(&EngineTensor<T>, T) -> Result<EngineTensor<T>, EngineError>),
+
     Add(NodeKey, NodeKey, fn(&EngineTensor<T>, &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
     Sub(NodeKey, NodeKey, fn(&EngineTensor<T>, &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
     Mul(NodeKey, NodeKey, fn(&EngineTensor<T>, &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
     Div(NodeKey, NodeKey, fn(&EngineTensor<T>, &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
 }
+
+impl<T: AllowedUnit> Edge<T> {
+    pub fn nodes(&self) -> EdgeNodesIterator<T> {
+        EdgeNodesIterator::<T>::new(self)
+    }
+
+    pub fn is_root(&self) -> bool {
+        match self {
+            Edge::Root => true,
+            _ => false,
+        }
+    }
+
+    //Single layer computation otherwise should throw an error
+    pub fn compute_tensor<'a, F: Fn(NodeKey) -> Result<&'a EngineTensor<T>, ComputationGraphError>>(&'a self, resolve: F) -> Result<EngineTensor<T>, ComputationGraphError> {
+        match self {
+            Edge::Root => Err(ComputationGraphError::RootNodeNotComputed()),
+            Edge::Abs(a_key, op) |  
+            Edge::Neg(a_key, op) => {
+                op(resolve(*a_key)?).map_err(|e| ComputationGraphError::from(e))
+            },
+            Edge::AddScalar(s, a_key, op) |
+            Edge::SubScalarLH(s, a_key, op) |
+            Edge::MulScalar(s, a_key, op) |
+            Edge::DivScalarLH(s, a_key, op) => {
+                op(*s, resolve(*a_key)?).map_err(|e| ComputationGraphError::from(e))
+            },
+            Edge::SubScalarRH(a_key, s, op) |
+            Edge::DivScalarRH(a_key, s, op) => {
+                    op(resolve(*a_key)?, *s).map_err(|e| ComputationGraphError::from(e))
+            }
+            Edge::Add(a_key, b_key, op) |
+            Edge::Sub(a_key, b_key, op) |
+            Edge::Mul(a_key, b_key, op) |
+            Edge::Div(a_key, b_key, op) => {
+
+                op(resolve(*a_key)?, resolve(*b_key)?).map_err(|e| ComputationGraphError::from(e))
+            },
+        }
+    }
+}
+
+pub struct EdgeNodesIterator<'a, T: AllowedUnit> {
+    edge: &'a Edge<T>,
+    pos: usize,
+}
+
+impl<'a, T: AllowedUnit> EdgeNodesIterator<'a, T> {
+    pub fn new(edge: &'a Edge<T>) -> Self {
+        Self {
+            edge,
+            pos: 0,
+        }
+    }
+}
+
+impl<'a, T: AllowedUnit> Iterator for EdgeNodesIterator<'a, T> {
+    type Item = NodeKey;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let out = match self.edge {
+            Edge::Root => None,
+            Edge::Abs(a_key, _) | 
+            Edge::Neg(a_key, _) |
+            Edge::AddScalar(_, a_key, _) |
+            Edge::SubScalarLH(_, a_key, _) |
+            Edge::SubScalarRH(a_key, _, _) |
+            Edge::MulScalar(_, a_key, _) |
+            Edge::DivScalarLH(_, a_key, _) |
+            Edge::DivScalarRH(a_key, _, _) => {
+                match self.pos {
+                    0 => Some(*a_key),
+                    _ => None,
+                }
+            }
+            Edge::Add(a_key, b_key, _) |
+            Edge::Sub(a_key, b_key, _) |
+            Edge::Mul(a_key, b_key, _) |
+            Edge::Div(a_key, b_key, _) => {
+                match self.pos {
+                    0 => Some(*a_key),
+                    1 => Some(*b_key),
+                    _ => None,
+                }
+            }
+        };
+
+        if out.is_some() {
+            self.pos += 1;
+        }
+
+        out
+    }
+}
+

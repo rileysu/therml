@@ -61,12 +61,12 @@ impl<T: AllowedUnit> CompGraph<T> {
         }
     }
 
-    pub fn get_node(&self, node_key: NodeKey) -> Option<&Node<T>> {
-        self.nodes.get(node_key)
+    pub fn get_node(&self, node_key: &NodeKey) -> Option<&Node<T>> {
+        self.nodes.get(*node_key)
     }
 
-    pub fn get_node_mut(&mut self, node_key: NodeKey) -> Option<&mut Node<T>> {
-        self.nodes.get_mut(node_key)
+    pub fn get_node_mut(&mut self, node_key: &NodeKey) -> Option<&mut Node<T>> {
+        self.nodes.get_mut(*node_key)
     }
 
     //Root is a node that is a starting point for computation
@@ -78,123 +78,127 @@ impl<T: AllowedUnit> CompGraph<T> {
         self.nodes.insert(Node::create_node(edge))
     }
 
-    //Single layer computation otherwise should throw an error
-    fn compute_tensor(&self, target_key: NodeKey) -> Result<EngineTensor<T>, ComputationGraphError> {
-        let target_node = self.get_node(target_key).ok_or(ComputationGraphError::NodeKeyDoesNotExist(target_key))?;
 
-        match target_node.edge() {
-            Edge::Root => Err(ComputationGraphError::RootNodeNotComputed(target_key)),
-            Edge::Abs(a_key, op) |  
-            Edge::Neg(a_key, op) => {
-                let a_node = self.get_node(*a_key).ok_or(ComputationGraphError::ParentNodeDoesNotExist(*a_key))?;
 
-                op(a_node.tensor().ok_or(ComputationGraphError::ParentNodeNotComputed(*a_key))?).map_err(|e| ComputationGraphError::from(e))
-            },
-            Edge::Add(a_key, b_key, op) |
-            Edge::Sub(a_key, b_key, op) |
-            Edge::Mul(a_key, b_key, op) |
-            Edge::Div(a_key, b_key, op) => {
-                let a_node = self.get_node(*a_key).ok_or(ComputationGraphError::ParentNodeDoesNotExist(*a_key))?;
-                let b_node = self.get_node(*b_key).ok_or(ComputationGraphError::ParentNodeDoesNotExist(*b_key))?;
-
-                op(a_node.tensor().ok_or(ComputationGraphError::ParentNodeNotComputed(*a_key))?, b_node.tensor().ok_or(ComputationGraphError::ParentNodeNotComputed(*b_key))?).map_err(|e| ComputationGraphError::from(e))
-            },
-        }
-    }
-
-    //TODO Fix error handling and clean up code
-    //Kahn's Algorithm
-    pub fn populating_eval(&mut self, target_key: NodeKey) -> Result<(), ComputationGraphError> {
-        //Nodes that have all dependencies satisfied
-        let mut open_nodes = Vec::<NodeKey>::new();
-
-        //Cache of children from a node (since it is usually linked backwards)
-        let mut node_children = HashMap::<NodeKey, Vec<NodeKey>>::new();
-        //Nodes that have been visited in the initial search (as to avoid duplicates in evaluation)
-        let mut visited_nodes: HashSet<NodeKey> = HashSet::new();
+    //First return is open nodes, second is node_to_children
+    //The algorithm is more efficient if done at the same time
+    fn generate_node_to_children(&self, target: &NodeKey) -> Result<(Vec<NodeKey>, HashMap::<NodeKey, Vec<NodeKey>>), ComputationGraphError> {
         //Nodes still to be searched with the initial search
-        let mut to_eval_nodes = vec![target_key];
+        let mut to_eval = vec![*target];
 
-        //Populate start nodes and node_children
-        while let Some(node_key) = to_eval_nodes.pop() {
-            let node = self.get_node(node_key).ok_or(ComputationGraphError::NodeKeyDoesNotExist(target_key))?;
+        //Nodes that have been visited in the initial search (as to avoid duplicates in evaluation)
+        let mut visited: HashSet<NodeKey> = HashSet::new();
 
-            match node.edge() {
-                Edge::Root => {
-                    open_nodes.push(node_key);
-                },
-                Edge::Abs(a_key, _) | Edge::Neg(a_key, _) => {
-                    if let Some(children) = node_children.get_mut(&a_key) {
-                        children.push(node_key);
-                    } else {
-                        node_children.insert(*a_key, vec![node_key]);
-                    }
+        //Nodes without dependencies
+        let mut open = Vec::<NodeKey>::new();
 
-                    if !visited_nodes.contains(&a_key) {
-                        to_eval_nodes.push(*a_key);
-                    }
-                },
-                Edge::Add(a_key, b_key, _) | Edge::Sub(a_key, b_key, _) | Edge::Mul(a_key, b_key, _) | Edge::Div(a_key, b_key, _) => {
-                    if let Some(children) = node_children.get_mut(&a_key) {
-                        children.push(node_key);
-                    } else {
-                        node_children.insert(*a_key, vec![node_key]);
-                    }
+        //Node to children map
+        let mut node_to_children = HashMap::<NodeKey, Vec<NodeKey>>::new();
 
-                    if b_key != a_key {
-                        if let Some(children) = node_children.get_mut(&b_key) {
+        while let Some(node_key) = to_eval.pop() {
+            let node = self.get_node(&node_key).ok_or(ComputationGraphError::NodeKeyDoesNotExist(*target))?;
+
+            if node.edge().is_root() {
+                open.push(node_key);
+            } else {
+                for parent_key in node.edge().nodes() {
+                    if let Some(children) = node_to_children.get_mut(&parent_key) {
+                        //This should be performant for small lists
+                        if !children.contains(&node_key) {
                             children.push(node_key);
-                        } else {
-                            node_children.insert(*b_key, vec![node_key]);
                         }
+                    } else {
+                        node_to_children.insert(parent_key, vec![node_key]);
                     }
 
-                    if !visited_nodes.contains(&a_key) {
-                        to_eval_nodes.push(*a_key);
-                        visited_nodes.insert(*a_key);
+                    if !visited.contains(&parent_key) {
+                        to_eval.push(parent_key);
+                        visited.insert(parent_key);
                     }
-
-                    if !visited_nodes.contains(&b_key) {
-                        to_eval_nodes.push(*b_key);
-                        visited_nodes.insert(*a_key);
-                    }
-                },
+                }
             }
         }
 
-        //Nodes already processed (in order to find more open nodes)
-        let mut processed_nodes = HashSet::<NodeKey>::from_iter(open_nodes.clone());
+        Ok((open, node_to_children))
+    }
 
-        while let Some(node_key) = open_nodes.pop() {
-            if !self.get_node(node_key).ok_or(ComputationGraphError::NodeKeyDoesNotExist(target_key))?.is_root() {
-                let comp_tensor = self.compute_tensor(node_key)?;
-                self.get_node_mut(node_key).ok_or(ComputationGraphError::NodeKeyDoesNotExist(target_key))?.set_tensor(comp_tensor);
+    //Uses Kahn's Algorithm
+    pub fn populating_eval(&mut self, target: NodeKey) -> Result<(), ComputationGraphError> {
+        //Nodes that have all dependencies satisfied
+        let (open_roots, node_to_children) = self.generate_node_to_children(&target)?;
+
+        //Current open set of nodes
+        let mut open = open_roots.clone();
+
+        //Nodes already processed (in order to find more open nodes)
+        let mut processed_nodes = HashSet::<NodeKey>::from_iter(open.clone());
+
+        while let Some(node_key) = open.pop() {
+            let node = self.get_node(&node_key).ok_or(ComputationGraphError::NodeKeyDoesNotExist(target))?;
+
+            if !node.is_root() {
+                let comp_tensor = node.edge().compute_tensor(
+                    |k| Ok(self.get_node(&k).ok_or(ComputationGraphError::NodeDoesNotExist(k))?.tensor().ok_or(ComputationGraphError::NodeNotComputed(k))?)
+                )?;
+                self.get_node_mut(&node_key).ok_or(ComputationGraphError::NodeKeyDoesNotExist(target))?.set_tensor(comp_tensor);
             }
 
             processed_nodes.insert(node_key);
 
-            if let Some(children_keys) = node_children.get(&node_key) {
+            if let Some(children_keys) = node_to_children.get(&node_key) {
                 for child_key in children_keys {
-                    let child_node = self.get_node(*child_key).ok_or(ComputationGraphError::NodeKeyDoesNotExist(target_key))?;
+                    let child_node = self.get_node(child_key).ok_or(ComputationGraphError::NodeKeyDoesNotExist(target))?;
 
-                    match child_node.edge() {
-                        Edge::Root => {
-                            //It should be impossible for a root to be a child
-                            return Err(ComputationGraphError::RootNodeIsChild(*child_key))
-                        },
-                        Edge::Abs(_, _) | 
-                        Edge::Neg(_, _) => {
-                            //Since we know we just processed the parent there is no need to check
-                            open_nodes.push(*child_key);
-                        },
-                        Edge::Add(a_key, b_key, _) | 
-                        Edge::Sub(a_key, b_key, _) | 
-                        Edge::Mul(a_key, b_key, _) | 
-                        Edge::Div(a_key, b_key, _) => {
-                            if processed_nodes.contains(a_key) && processed_nodes.contains(b_key) {
-                                open_nodes.push(*child_key);
-                            }
-                        },
+                    if child_node.edge().is_root() {
+                        return Err(ComputationGraphError::RootNodeIsChild(*child_key));
+                    } else {
+                        if child_node.edge().nodes().all(|k| processed_nodes.contains(&k)) {
+                            open.push(*child_key);
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn non_populating_eval(&mut self, target: NodeKey) -> Result<(), ComputationGraphError> {
+        //Nodes that have all dependencies satisfied
+        let (open_roots, node_to_children) = self.generate_node_to_children(&target)?;
+
+        //Current open set of nodes
+        let mut open = open_roots.clone();
+
+        //Nodes already processed (in order to find more open nodes)
+        let mut processed_nodes = HashSet::<NodeKey>::from_iter(open.clone());
+
+        //Cache for calculated nodes
+        //Should be cleared once no dependencies left
+        let mut comp_cache = HashMap::<NodeKey, EngineTensor<T>>::new();
+
+        while let Some(node_key) = open.pop() {
+            let node = self.get_node(&node_key).ok_or(ComputationGraphError::NodeKeyDoesNotExist(target))?;
+
+            if !node.is_root() {
+                let comp_tensor = node.edge().compute_tensor(
+                    |k| Ok(comp_cache.get(&k).ok_or(ComputationGraphError::NodeNotComputed(k))?)
+                )?;
+                comp_cache.insert(node_key, comp_tensor);
+            }
+
+            processed_nodes.insert(node_key);
+
+            if let Some(children_keys) = node_to_children.get(&node_key) {
+                for child_key in children_keys {
+                    let child_node = self.get_node(child_key).ok_or(ComputationGraphError::NodeKeyDoesNotExist(target))?;
+
+                    if child_node.edge().is_root() {
+                        return Err(ComputationGraphError::RootNodeIsChild(*child_key));
+                    } else {
+                        if child_node.edge().nodes().all(|k| processed_nodes.contains(&k)) {
+                            open.push(*child_key);
+                        }
                     }
                 }
             }
@@ -209,6 +213,30 @@ impl<T: AllowedUnit> CompGraph<T> {
 
     pub fn neg<E: Engine<T>, F: EngineTensorFactory<T>>(&mut self, a: NodeKey) -> NodeKey {
         self.create_node(Edge::Neg(a, E::neg::<F>))
+    }
+
+    pub fn add_scalar<E: Engine<T>, F: EngineTensorFactory<T>>(&mut self, s: T, a: NodeKey) -> NodeKey {
+        self.create_node(Edge::AddScalar(s, a, E::add_scalar::<F>))
+    }
+
+    pub fn sub_scalar_lh<E: Engine<T>, F: EngineTensorFactory<T>>(&mut self, s: T, a: NodeKey) -> NodeKey {
+        self.create_node(Edge::SubScalarLH(s, a, E::sub_scalar_lh::<F>))
+    }
+
+    pub fn sub_scalar_rh<E: Engine<T>, F: EngineTensorFactory<T>>(&mut self, a: NodeKey, s: T) -> NodeKey {
+        self.create_node(Edge::SubScalarRH(a, s, E::sub_scalar_rh::<F>))
+    }
+
+    pub fn mul_scalar<E: Engine<T>, F: EngineTensorFactory<T>>(&mut self, s: T, a: NodeKey) -> NodeKey {
+        self.create_node(Edge::MulScalar(s, a, E::mul_scalar::<F>))
+    }
+
+    pub fn div_scalar_lh<E: Engine<T>, F: EngineTensorFactory<T>>(&mut self, s: T, a: NodeKey) -> NodeKey {
+        self.create_node(Edge::DivScalarLH(s, a, E::div_scalar_lh::<F>))
+    }
+
+    pub fn div_scalar_rh<E: Engine<T>, F: EngineTensorFactory<T>>(&mut self, a: NodeKey, s: T) -> NodeKey {
+        self.create_node(Edge::DivScalarRH(a, s, E::div_scalar_rh::<F>))
     }
 
     pub fn add<E: Engine<T>, F: EngineTensorFactory<T>>(&mut self, a: NodeKey, b: NodeKey) -> NodeKey {
@@ -233,11 +261,11 @@ pub enum ComputationGraphError {
     #[error("Node key does not exist in this computation graph")]
     NodeKeyDoesNotExist(NodeKey),
     #[error("Root node doesn't contain computed tensor")]
-    RootNodeNotComputed(NodeKey),
-    #[error("Parent node does not exist in this computation graph")]
-    ParentNodeDoesNotExist(NodeKey),
-    #[error("Parent node not computed when expected to be")]
-    ParentNodeNotComputed(NodeKey),
+    RootNodeNotComputed(),
+    #[error("Node does not exist in this computation graph")]
+    NodeDoesNotExist(NodeKey),
+    #[error("Node not computed when expected to be")]
+    NodeNotComputed(NodeKey),
     #[error("Root node was found as the child of another node")]
     RootNodeIsChild(NodeKey),
     #[error("Error in computation: {0}")]
@@ -277,20 +305,23 @@ mod test {
         let op2 = graph.mul::<Basic, Array>(op1, root2);
         let op3 = graph.sub::<Basic, Array>(op2, root3);
 
-        let op4 = graph.mul::<Basic, Array>(op3, op3);
+        let op4 = graph.mul_scalar::<Basic, Array>(2.0, op3);
+        let op5 = graph.div_scalar_rh::<Basic, Array>(op4, 2.0);
 
-        let op5 = graph.div::<Basic, Array>(op4, root1);
+        let op6 = graph.mul::<Basic, Array>(op5, op5);
 
-        return (op5, Array::from_slice([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0].as_slice(), Shape::from([3, 3].as_slice())), Array::from_slice([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0].as_slice(), Shape::from([3, 3].as_slice())), graph);
+        let op7 = graph.div::<Basic, Array>(op6, root1);
+
+        return (op7, Array::from_slice([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0].as_slice(), Shape::from([3, 3].as_slice())), Array::from_slice([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0].as_slice(), Shape::from([3, 3].as_slice())), graph);
     }
 
     #[test]
     fn simple_no_eval() {
         let (_, _, added, _, graph) = init_simple_graph();
 
-        assert!(graph.get_node(added).is_some());
+        assert!(graph.get_node(&added).is_some());
 
-        let node = graph.get_node(added).unwrap();
+        let node = graph.get_node(&added).unwrap();
 
         assert!(node.tensor().is_none());
     }
@@ -301,9 +332,9 @@ mod test {
 
         graph.populating_eval(added).unwrap();
 
-        assert!(graph.get_node(added).is_some());
+        assert!(graph.get_node(&added).is_some());
 
-        let node = graph.get_node(added).unwrap();
+        let node = graph.get_node(&added).unwrap();
 
         assert!(node.tensor().is_some());
 
@@ -316,7 +347,7 @@ mod test {
 
         graph.populating_eval(node_key).unwrap();
         
-        let node = graph.get_node(node_key).unwrap();
+        let node = graph.get_node(&node_key).unwrap();
 
         assert_eq!(*node.tensor().unwrap(), expected_original);
     }
@@ -325,14 +356,16 @@ mod test {
     fn large_depth_eval() {
         let (node_key, _, expected_unit,  mut graph) = init_complex_graph();
 
+        let power = 12u16;
+
         let mut out = node_key;
-        for _ in  0..20000 {
+        for _ in  0..2_usize.pow(power as u32) {
             out = graph.div::<Basic, Array>(out, out);
         }
 
         graph.populating_eval(out).unwrap();
 
-        let node = graph.get_node(out).unwrap();
+        let node = graph.get_node(&out).unwrap();
 
         assert_eq!(*node.tensor().unwrap(), expected_unit);
     }
@@ -362,7 +395,7 @@ mod test {
 
         graph.populating_eval(*node_key).unwrap();
 
-        let node = graph.get_node(*node_key).unwrap();
+        let node = graph.get_node(node_key).unwrap();
 
         let expected = Array::from_iter( &mut expected_original.iter().map(|x| x * 2.0f32.pow(power)), expected_original.shape().clone());
 
