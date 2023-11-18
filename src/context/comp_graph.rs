@@ -36,6 +36,15 @@ impl<T: AllowedUnit> Node<T> {
         self.tensor = Some(tensor)
     }
 
+    pub fn clear_tensor(&mut self) -> Result<(), ComputationGraphError> {
+        if self.is_root() {
+            return Err(ComputationGraphError::CannotClearRoot())
+        }
+
+        self.tensor = None;
+        Ok(())
+    }
+
     pub fn edge(&self) -> &Edge<T> {
         &self.edge
     }
@@ -65,8 +74,16 @@ impl<T: AllowedUnit> CompGraph<T> {
         self.nodes.get(*node_key)
     }
 
+    pub fn get_node_error(&self, node_key: &NodeKey) -> Result<&Node<T>, ComputationGraphError> {
+        self.nodes.get(*node_key).ok_or(ComputationGraphError::NodeDoesNotExist(*node_key))
+    }
+
     pub fn get_node_mut(&mut self, node_key: &NodeKey) -> Option<&mut Node<T>> {
         self.nodes.get_mut(*node_key)
+    }
+
+    pub fn get_node_mut_error(&mut self, node_key: &NodeKey) -> Result<&mut Node<T>, ComputationGraphError> {
+        self.nodes.get_mut(*node_key).ok_or(ComputationGraphError::NodeDoesNotExist(*node_key))
     }
 
     //Root is a node that is a starting point for computation
@@ -96,7 +113,7 @@ impl<T: AllowedUnit> CompGraph<T> {
         let mut node_to_children = HashMap::<NodeKey, Vec<NodeKey>>::new();
 
         while let Some(node_key) = to_eval.pop() {
-            let node = self.get_node(&node_key).ok_or(ComputationGraphError::NodeKeyDoesNotExist(*target))?;
+            let node = self.get_node(&node_key).ok_or(ComputationGraphError::NodeDoesNotExist(*target))?;
 
             if node.edge().is_root() {
                 open.push(node_key);
@@ -134,25 +151,26 @@ impl<T: AllowedUnit> CompGraph<T> {
         let mut processed_nodes = HashSet::<NodeKey>::from_iter(open.clone());
 
         while let Some(node_key) = open.pop() {
-            let node = self.get_node(&node_key).ok_or(ComputationGraphError::NodeKeyDoesNotExist(target))?;
+            let node = self.get_node(&node_key).ok_or(ComputationGraphError::NodeDoesNotExist(target))?;
 
             if !node.is_root() {
                 let comp_tensor = node.edge().compute_tensor(
                     |k| Ok(self.get_node(&k).ok_or(ComputationGraphError::NodeDoesNotExist(k))?.tensor().ok_or(ComputationGraphError::NodeNotComputed(k))?)
                 )?;
-                self.get_node_mut(&node_key).ok_or(ComputationGraphError::NodeKeyDoesNotExist(target))?.set_tensor(comp_tensor);
+                self.get_node_mut(&node_key).ok_or(ComputationGraphError::NodeDoesNotExist(target))?.set_tensor(comp_tensor);
             }
 
             processed_nodes.insert(node_key);
 
             if let Some(children_keys) = node_to_children.get(&node_key) {
                 for child_key in children_keys {
-                    let child_node = self.get_node(child_key).ok_or(ComputationGraphError::NodeKeyDoesNotExist(target))?;
+                    let child_node = self.get_node(child_key).ok_or(ComputationGraphError::NodeDoesNotExist(target))?;
 
                     if child_node.edge().is_root() {
                         return Err(ComputationGraphError::RootNodeIsChild(*child_key));
                     } else {
-                        if child_node.edge().nodes().all(|k| processed_nodes.contains(&k)) {
+                        //If all parents of the child are processed and the child hasn't been processed before then add it to be processed
+                        if child_node.edge().nodes().all(|k| processed_nodes.contains(&k)) && !processed_nodes.contains(child_key) {
                             open.push(*child_key);
                         }
                     }
@@ -178,31 +196,46 @@ impl<T: AllowedUnit> CompGraph<T> {
         let mut comp_cache = HashMap::<NodeKey, EngineTensor<T>>::new();
 
         while let Some(node_key) = open.pop() {
-            let node = self.get_node(&node_key).ok_or(ComputationGraphError::NodeKeyDoesNotExist(target))?;
+            let node = self.get_node(&node_key).ok_or(ComputationGraphError::NodeDoesNotExist(target))?;
 
             if !node.is_root() {
                 let comp_tensor = node.edge().compute_tensor(
-                    |k| Ok(comp_cache.get(&k).ok_or(ComputationGraphError::NodeNotComputed(k))?)
+                    |k| {
+                        match comp_cache.get(&k) {
+                            Some(tensor) => Ok(tensor),
+                            None => Ok(self.get_node(&k).ok_or(ComputationGraphError::NodeDoesNotExist(k))?.tensor().ok_or(ComputationGraphError::NodeNotComputed(k))?),
+                        }
+                    }
                 )?;
                 comp_cache.insert(node_key, comp_tensor);
+
+                //All children are defined in the cache so the parent is no longer needed
+                for parent_key in node.edge().nodes() {
+                    if node_to_children.get(&parent_key).unwrap().iter().all(|k| comp_cache.contains_key(k)) {
+                        comp_cache.remove(&parent_key);
+                    }
+                }
             }
 
             processed_nodes.insert(node_key);
 
             if let Some(children_keys) = node_to_children.get(&node_key) {
                 for child_key in children_keys {
-                    let child_node = self.get_node(child_key).ok_or(ComputationGraphError::NodeKeyDoesNotExist(target))?;
+                    let child_node = self.get_node(child_key).ok_or(ComputationGraphError::NodeDoesNotExist(target))?;
 
                     if child_node.edge().is_root() {
                         return Err(ComputationGraphError::RootNodeIsChild(*child_key));
                     } else {
-                        if child_node.edge().nodes().all(|k| processed_nodes.contains(&k)) {
+                        //If all parents of the child are processed and the child hasn't been processed before then add it to be processed
+                        if child_node.edge().nodes().all(|k| processed_nodes.contains(&k)) && !processed_nodes.contains(child_key) {
                             open.push(*child_key);
                         }
                     }
                 }
             }
         }
+
+        self.get_node_mut(&target).ok_or(ComputationGraphError::NodeDoesNotExist(target))?.set_tensor(comp_cache.remove(&target).ok_or(ComputationGraphError::NodeDoesNotExist(target))?);
 
         Ok(())
     }
@@ -258,16 +291,16 @@ impl<T: AllowedUnit> CompGraph<T> {
 
 #[derive(Error, Debug)]
 pub enum ComputationGraphError {
-    #[error("Node key does not exist in this computation graph")]
-    NodeKeyDoesNotExist(NodeKey),
-    #[error("Root node doesn't contain computed tensor")]
-    RootNodeNotComputed(),
     #[error("Node does not exist in this computation graph")]
     NodeDoesNotExist(NodeKey),
+    #[error("Root node doesn't contain computed tensor")]
+    RootNodeNotComputed(),
     #[error("Node not computed when expected to be")]
     NodeNotComputed(NodeKey),
     #[error("Root node was found as the child of another node")]
     RootNodeIsChild(NodeKey),
+    #[error("Tried to clear root node")]
+    CannotClearRoot(),
     #[error("Error in computation: {0}")]
     ComputationError(#[from]EngineError),
 }
@@ -330,6 +363,18 @@ mod test {
     fn simple_eval() {
         let (_, _, added, expected, mut graph) = init_simple_graph();
 
+        graph.non_populating_eval(added).unwrap();
+
+        assert!(graph.get_node(&added).is_some());
+
+        let node = graph.get_node_mut(&added).unwrap();
+
+        assert!(node.tensor().is_some());
+
+        assert_eq!(*node.tensor().unwrap(), expected);
+
+        node.clear_tensor().unwrap();
+
         graph.populating_eval(added).unwrap();
 
         assert!(graph.get_node(&added).is_some());
@@ -342,17 +387,6 @@ mod test {
     }
 
     #[test]
-    fn complex_eval() {
-        let (node_key, expected_original, _, mut graph) = init_complex_graph();
-
-        graph.populating_eval(node_key).unwrap();
-        
-        let node = graph.get_node(&node_key).unwrap();
-
-        assert_eq!(*node.tensor().unwrap(), expected_original);
-    }
-
-    #[test]
     fn large_depth_eval() {
         let (node_key, _, expected_unit,  mut graph) = init_complex_graph();
 
@@ -362,6 +396,14 @@ mod test {
         for _ in  0..2_usize.pow(power as u32) {
             out = graph.div::<Basic, Array>(out, out);
         }
+
+        graph.non_populating_eval(out).unwrap();
+
+        let node = graph.get_node_mut(&out).unwrap();
+
+        assert_eq!(*node.tensor().unwrap(), expected_unit);
+
+        node.clear_tensor().unwrap();
 
         graph.populating_eval(out).unwrap();
 
@@ -393,11 +435,19 @@ mod test {
 
         let node_key = new_node_keys.last().unwrap();
 
+        let expected = Array::from_iter( &mut expected_original.iter().map(|x| x * 2.0f32.pow(power)), expected_original.shape().clone());
+
+        graph.non_populating_eval(*node_key).unwrap();
+
+        let node = graph.get_node_mut(node_key).unwrap();
+
+        assert_eq!(*node.tensor().unwrap(), expected);
+
+        node.clear_tensor().unwrap();
+
         graph.populating_eval(*node_key).unwrap();
 
         let node = graph.get_node(node_key).unwrap();
-
-        let expected = Array::from_iter( &mut expected_original.iter().map(|x| x * 2.0f32.pow(power)), expected_original.shape().clone());
 
         assert_eq!(*node.tensor().unwrap(), expected);
     }

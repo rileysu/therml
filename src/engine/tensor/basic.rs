@@ -1,8 +1,6 @@
-use num::{Signed, Unsigned, traits::real::Real};
-
 use crate::engine::{Engine, basic::Basic, EngineError};
 
-use super::{EngineTensor, factory::EngineTensorFactory, allowed_unit::AllowedUnit};
+use super::{EngineTensor, factory::EngineTensorFactory};
 
 macro_rules! basic_impl {
     ($unit:ty) => {
