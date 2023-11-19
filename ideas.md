@@ -24,3 +24,4 @@
 ## TODO
 
 - Refactor comp_graph to improve errors (ones with no nodekey) and reduce repeated code
+- Need a way to remove graphs / subgraphs once they are finished 
