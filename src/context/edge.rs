@@ -6,20 +6,20 @@ use super::comp_graph::{NodeKey, ComputationGraphError};
 pub enum Edge<T: AllowedUnit> {
     Root,
 
-    Abs(NodeKey, fn(&EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
-    Neg(NodeKey, fn(&EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
+    Abs(NodeKey, fn(&dyn EngineTensor<T>) -> Result<Box<dyn EngineTensor<T>>, EngineError>),
+    Neg(NodeKey, fn(&dyn EngineTensor<T>) -> Result<Box<dyn EngineTensor<T>>, EngineError>),
 
-    AddScalar(T, NodeKey, fn(T, &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
-    SubScalarLH(T, NodeKey, fn(T, &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
-    SubScalarRH(NodeKey, T, fn(&EngineTensor<T>, T) -> Result<EngineTensor<T>, EngineError>),
-    MulScalar(T, NodeKey, fn(T, &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
-    DivScalarLH(T, NodeKey, fn(T, &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
-    DivScalarRH(NodeKey, T, fn(&EngineTensor<T>, T) -> Result<EngineTensor<T>, EngineError>),
+    AddScalar(T, NodeKey, fn(T, &dyn EngineTensor<T>) -> Result<Box<dyn EngineTensor<T>>, EngineError>),
+    SubScalarLH(T, NodeKey, fn(T, &dyn EngineTensor<T>) -> Result<Box<dyn EngineTensor<T>>, EngineError>),
+    SubScalarRH(NodeKey, T, fn(&dyn EngineTensor<T>, T) -> Result<Box<dyn EngineTensor<T>>, EngineError>),
+    MulScalar(T, NodeKey, fn(T, &dyn EngineTensor<T>) -> Result<Box<dyn EngineTensor<T>>, EngineError>),
+    DivScalarLH(T, NodeKey, fn(T, &dyn EngineTensor<T>) -> Result<Box<dyn EngineTensor<T>>, EngineError>),
+    DivScalarRH(NodeKey, T, fn(&dyn EngineTensor<T>, T) -> Result<Box<dyn EngineTensor<T>>, EngineError>),
 
-    Add(NodeKey, NodeKey, fn(&EngineTensor<T>, &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
-    Sub(NodeKey, NodeKey, fn(&EngineTensor<T>, &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
-    Mul(NodeKey, NodeKey, fn(&EngineTensor<T>, &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
-    Div(NodeKey, NodeKey, fn(&EngineTensor<T>, &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>),
+    Add(NodeKey, NodeKey, fn(&dyn EngineTensor<T>, &dyn EngineTensor<T>) -> Result<Box<dyn EngineTensor<T>>, EngineError>),
+    Sub(NodeKey, NodeKey, fn(&dyn EngineTensor<T>, &dyn EngineTensor<T>) -> Result<Box<dyn EngineTensor<T>>, EngineError>),
+    Mul(NodeKey, NodeKey, fn(&dyn EngineTensor<T>, &dyn EngineTensor<T>) -> Result<Box<dyn EngineTensor<T>>, EngineError>),
+    Div(NodeKey, NodeKey, fn(&dyn EngineTensor<T>, &dyn EngineTensor<T>) -> Result<Box<dyn EngineTensor<T>>, EngineError>),
 }
 
 impl<T: AllowedUnit> Edge<T> {
@@ -35,7 +35,7 @@ impl<T: AllowedUnit> Edge<T> {
     }
 
     //Single layer computation otherwise should throw an error
-    pub fn compute_tensor<'a, F: Fn(NodeKey) -> Result<&'a EngineTensor<T>, ComputationGraphError>>(&'a self, resolve: F) -> Result<EngineTensor<T>, ComputationGraphError> {
+    pub fn compute_tensor<'a, F: Fn(NodeKey) -> Result<&'a dyn EngineTensor<T>, ComputationGraphError>>(&'a self, resolve: F) -> Result<Box<dyn EngineTensor<T>>, ComputationGraphError> {
         match self {
             Edge::Root => Err(ComputationGraphError::RootNodeNotComputed()),
             Edge::Abs(a_key, op) |  

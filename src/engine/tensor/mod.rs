@@ -1,25 +1,115 @@
 pub mod iter;
 pub mod basic;
+pub mod block;
 pub mod allowed_unit;
 pub mod factory;
 
 use std::sync::Arc;
 use crate::helper::{Shape, Stride, Position, Slice};
-use self::{iter::EngineTensorIterator, allowed_unit::AllowedUnit};
+use self::{iter::EngineTensorIterator, allowed_unit::{AllowedUnit, AllowedArray, AllowedQuant}};
+use std::fmt::Debug;
 
-#[derive(Debug)]
-pub enum EngineTensorSpecs<T: Sized + Copy> {
-    Array {
-        data: Arc<[T]>,
-        offset: usize,
-    },
-    Quant {
-        data: Arc<[T]>,
-        offset: usize,
-    },
+pub trait EngineTensor<T: AllowedUnit>: Debug {
+    fn shape(&self) -> &Shape;
+    fn stride(&self) -> &Stride;
+    fn get(&self, pos: &Position) -> T;
+    fn iter(&self) -> EngineTensorIterator<'_, T>;
+    fn slice(&self, slice: &Slice) -> Box<dyn EngineTensor<T>>;
+    fn reshape(&self, shape: Shape) -> Box<dyn EngineTensor<T>>;
+}
+
+impl<T: AllowedUnit> PartialEq for dyn EngineTensor<T> + '_ {
+    fn eq(&self, other: &Self) -> bool {
+        self.shape() == other.shape() && self.iter().zip(other.iter()).all(|(a, b)| a == b)
+    }
 }
 
 #[derive(Debug)]
+pub struct Array<T: AllowedArray> {
+    stride: Stride,
+    shape: Shape,
+    data: Arc<[T]>,
+    offset: usize,
+}
+
+impl<T: AllowedArray> EngineTensor<T> for Array<T> {
+    fn shape(&self) -> &Shape {
+        &self.shape
+    }
+
+    fn stride(&self) -> &Stride {
+        &self.stride
+    }
+
+    fn get(&self, pos: &Position) -> T {
+        let index = pos.index(&self.stride).unwrap() + self.offset;
+
+        *self.data.as_ref().get(index).unwrap()
+    }
+
+    fn iter(&self) -> EngineTensorIterator<'_, T> {
+        EngineTensorIterator::new(self)
+    }
+
+    fn slice(&self, slice: &Slice) -> Box<dyn EngineTensor<T>> {
+        let offset = slice.start().index(self.stride()).unwrap();
+
+        Box::from(Self {
+            stride: self.stride.clone(),
+            shape: self.shape.clone(),
+            data: self.data.clone(),
+            offset,
+        })
+    }
+
+    fn reshape(&self, shape: Shape) -> Box<dyn EngineTensor<T>> {
+        todo!()
+    }
+}
+
+#[derive(Debug)]
+pub struct Quant<T: AllowedQuant> {
+    stride: Stride,
+    shape: Shape,
+    data: Arc<[T]>,
+    offset: usize,
+}
+
+impl<T: AllowedQuant> EngineTensor<T> for Quant<T> {
+    fn shape(&self) -> &Shape {
+        &self.shape
+    }
+
+    fn stride(&self) -> &Stride {
+        &self.stride
+    }
+
+    fn get(&self, pos: &Position) -> T {
+        let index = pos.index(&self.stride).unwrap() + self.offset;
+
+        *self.data.as_ref().get(index).unwrap()
+    }
+
+    fn iter(&self) -> EngineTensorIterator<'_, T> {
+        EngineTensorIterator::new(self)
+    }
+
+    fn slice(&self, slice: &Slice) -> Box<dyn EngineTensor<T>> {
+        let offset = slice.start().index(self.stride()).unwrap();
+
+        Box::from(Self {
+            stride: self.stride.clone(),
+            shape: self.shape.clone(),
+            data: self.data.clone(),
+            offset,
+        })
+    }
+
+    fn reshape(&self, shape: Shape) -> Box<dyn EngineTensor<T>> {
+        todo!()
+    }
+}
+/*#[derive(Debug)]
 pub struct EngineTensor<T: AllowedUnit> {
     specs: EngineTensorSpecs<T>,
     stride: Stride,
@@ -79,5 +169,5 @@ impl<T: AllowedUnit> PartialEq for EngineTensor<T> {
         self.shape() == other.shape() && self.iter().zip(other.iter()).all(|(a, b)| a == b)
     }
 }
-impl<T: AllowedUnit> Eq for EngineTensor<T> {}
+impl<T: AllowedUnit> Eq for EngineTensor<T> {}*/
 

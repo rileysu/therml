@@ -13,22 +13,22 @@ use thiserror::Error;
 //Factory defines the unit as well as output tensor type
 pub trait Engine<T: AllowedUnit> {
     //Pointwise Single
-    fn abs<E: EngineTensorFactory<T>>(a: &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>;
-    fn neg<E: EngineTensorFactory<T>>(a: &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>;
+    fn abs<E: EngineTensorFactory<T>>(a: &dyn EngineTensor<T>) -> Result<Box<dyn EngineTensor<T>>, EngineError>;
+    fn neg<E: EngineTensorFactory<T>>(a: &dyn EngineTensor<T>) -> Result<Box<dyn EngineTensor<T>>, EngineError>;
     
     //Pointwise Scalar
-    fn add_scalar<E: EngineTensorFactory<T>>(s: T, a: &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>;
-    fn sub_scalar_lh<E: EngineTensorFactory<T>>(s: T, a: &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>;
-    fn sub_scalar_rh<E: EngineTensorFactory<T>>(a: &EngineTensor<T>, s: T) -> Result<EngineTensor<T>, EngineError>;
-    fn mul_scalar<E: EngineTensorFactory<T>>(s: T, a: &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>;
-    fn div_scalar_lh<E: EngineTensorFactory<T>>(s: T, a: &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>;
-    fn div_scalar_rh<E: EngineTensorFactory<T>>(a: &EngineTensor<T>, s: T) -> Result<EngineTensor<T>, EngineError>;
+    fn add_scalar<E: EngineTensorFactory<T>>(s: T, a: &dyn EngineTensor<T>) -> Result<Box<dyn EngineTensor<T>>, EngineError>;
+    fn sub_scalar_lh<E: EngineTensorFactory<T>>(s: T, a: &dyn EngineTensor<T>) -> Result<Box<dyn EngineTensor<T>>, EngineError>;
+    fn sub_scalar_rh<E: EngineTensorFactory<T>>(a: &dyn EngineTensor<T>, s: T) -> Result<Box<dyn EngineTensor<T>>, EngineError>;
+    fn mul_scalar<E: EngineTensorFactory<T>>(s: T, a: &dyn EngineTensor<T>) -> Result<Box<dyn EngineTensor<T>>, EngineError>;
+    fn div_scalar_lh<E: EngineTensorFactory<T>>(s: T, a: &dyn EngineTensor<T>) -> Result<Box<dyn EngineTensor<T>>, EngineError>;
+    fn div_scalar_rh<E: EngineTensorFactory<T>>(a: &dyn EngineTensor<T>, s: T) -> Result<Box<dyn EngineTensor<T>>, EngineError>;
 
     //Pointwise Double
-    fn add<E: EngineTensorFactory<T>>(a: &EngineTensor<T>, b: &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>;
-    fn sub<E: EngineTensorFactory<T>>(a: &EngineTensor<T>, b: &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>;
-    fn mul<E: EngineTensorFactory<T>>(a: &EngineTensor<T>, b: &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>;
-    fn div<E: EngineTensorFactory<T>>(a: &EngineTensor<T>, b: &EngineTensor<T>) -> Result<EngineTensor<T>, EngineError>;
+    fn add<E: EngineTensorFactory<T>>(a: &dyn EngineTensor<T>, b: &dyn EngineTensor<T>) -> Result<Box<dyn EngineTensor<T>>, EngineError>;
+    fn sub<E: EngineTensorFactory<T>>(a: &dyn EngineTensor<T>, b: &dyn EngineTensor<T>) -> Result<Box<dyn EngineTensor<T>>, EngineError>;
+    fn mul<E: EngineTensorFactory<T>>(a: &dyn EngineTensor<T>, b: &dyn EngineTensor<T>) -> Result<Box<dyn EngineTensor<T>>, EngineError>;
+    fn div<E: EngineTensorFactory<T>>(a: &dyn EngineTensor<T>, b: &dyn EngineTensor<T>) -> Result<Box<dyn EngineTensor<T>>, EngineError>;
 }
 
 #[derive(Error, Debug)]

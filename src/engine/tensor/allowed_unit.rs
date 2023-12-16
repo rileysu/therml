@@ -1,7 +1,9 @@
+use std::fmt::Debug;
+
 use num::Num;
 
-pub trait AllowedUnit: Num + Sized + Copy {}
-impl<T: Num + Sized + Copy> AllowedUnit for T {}
+pub trait AllowedUnit: Num + Sized + Copy + Debug + 'static {}
+impl<T: Num + Sized + Copy + Debug + 'static> AllowedUnit for T {}
 
 pub trait AllowedArray: AllowedUnit {}
 impl<T: AllowedUnit> AllowedArray for T {}
