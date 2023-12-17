@@ -29,4 +29,5 @@
     - Use phantom to make tensors references to graph so it can't outlive graph
 - Probably remove the distinction between context and comp_graph
     - Dump graph on calculation
-    - Allow for recalc maybe
+    - Allow for recalc maybe (as in mutating tensors within the graph)
+- Model how the graph interface should look externally as ergonomics is an issue rn

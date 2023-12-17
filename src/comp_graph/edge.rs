@@ -1,6 +1,6 @@
 use crate::engine::{tensor::{allowed_unit::AllowedUnit, EngineTensor}, EngineError};
 
-use super::comp_graph::{NodeKey, ComputationGraphError};
+use super::{NodeKey, ComputationGraphError};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Edge<T: AllowedUnit> {

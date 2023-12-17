@@ -1,11 +1,13 @@
+mod edge;
+
 use std::collections::{HashSet, HashMap};
 
 use slotmap::{SlotMap, new_key_type};
 use thiserror::Error;
 
-use crate::engine::{tensor::{EngineTensor, allowed_unit::AllowedUnit, factory::EngineTensorFactory}, Engine, EngineError};
+use crate::engine::{tensor::{EngineTensor, allowed_unit::AllowedUnit, factory::EngineTensorFactory, iter::EngineTensorIterator}, Engine, EngineError};
 
-use super::edge::Edge;
+use self::edge::Edge;
 
 #[derive(Debug)]
 pub struct Node<T: AllowedUnit> {
@@ -14,29 +16,29 @@ pub struct Node<T: AllowedUnit> {
 }
 
 impl<T: AllowedUnit> Node<T> {
-    pub fn create_root(tensor: Box<dyn EngineTensor<Unit = T>>) -> Self {
+    fn create_root(tensor: Box<dyn EngineTensor<Unit = T>>) -> Self {
         Self {
             tensor: Some(tensor),
             edge: Edge::Root,
         }
     }
 
-    pub fn create_node(edge: Edge<T>) -> Self {
+    fn create_node(edge: Edge<T>) -> Self {
         Self {
             tensor: None,
             edge,
         }
     }
 
-    pub fn tensor(&self) -> Option<&dyn EngineTensor<Unit = T>> {
+    fn tensor(&self) -> Option<&dyn EngineTensor<Unit = T>> {
         self.tensor.as_deref()
     }
 
-    pub fn set_tensor(&mut self, tensor: Box<dyn EngineTensor<Unit = T>>) {
+    fn set_tensor(&mut self, tensor: Box<dyn EngineTensor<Unit = T>>) {
         self.tensor = Some(tensor)
     }
 
-    pub fn clear_tensor(&mut self) -> Result<(), ComputationGraphError> {
+    fn clear_tensor(&mut self) -> Result<(), ComputationGraphError> {
         if self.is_root() {
             return Err(ComputationGraphError::CannotClearRoot())
         }
@@ -45,11 +47,11 @@ impl<T: AllowedUnit> Node<T> {
         Ok(())
     }
 
-    pub fn edge(&self) -> &Edge<T> {
+    fn edge(&self) -> &Edge<T> {
         &self.edge
     }
 
-    pub fn is_root(&self) -> bool {
+    fn is_root(&self) -> bool {
         *self.edge() == Edge::Root
     }
 }
@@ -70,32 +72,38 @@ impl<T: AllowedUnit> CompGraph<T> {
         }
     }
 
-    pub fn get_node(&self, node_key: &NodeKey) -> Option<&Node<T>> {
+    fn get_node(&self, node_key: &NodeKey) -> Option<&Node<T>> {
         self.nodes.get(*node_key)
     }
 
-    pub fn get_node_error(&self, node_key: &NodeKey) -> Result<&Node<T>, ComputationGraphError> {
+    fn get_node_error(&self, node_key: &NodeKey) -> Result<&Node<T>, ComputationGraphError> {
         self.nodes.get(*node_key).ok_or(ComputationGraphError::NodeDoesNotExist(*node_key))
     }
 
-    pub fn get_node_mut(&mut self, node_key: &NodeKey) -> Option<&mut Node<T>> {
+    fn get_node_mut(&mut self, node_key: &NodeKey) -> Option<&mut Node<T>> {
         self.nodes.get_mut(*node_key)
     }
 
-    pub fn get_node_mut_error(&mut self, node_key: &NodeKey) -> Result<&mut Node<T>, ComputationGraphError> {
+    fn get_node_mut_error(&mut self, node_key: &NodeKey) -> Result<&mut Node<T>, ComputationGraphError> {
         self.nodes.get_mut(*node_key).ok_or(ComputationGraphError::NodeDoesNotExist(*node_key))
     }
 
     //Root is a node that is a starting point for computation
-    pub fn create_root(&mut self, tensor: Box<dyn EngineTensor<Unit = T>>) -> NodeKey {
+    fn create_root_node(&mut self, tensor: Box<dyn EngineTensor<Unit = T>>) -> NodeKey {
         self.nodes.insert(Node::create_root(tensor))
     }
 
-    pub fn create_node(&mut self, edge: Edge<T>) -> NodeKey {
+    pub fn create_root(&mut self, tensor: Box<dyn EngineTensor<Unit = T>>) -> CompGraphTensor {
+        CompGraphTensor::new(self.create_root_node(tensor))
+    }
+
+    fn create_node(&mut self, edge: Edge<T>) -> NodeKey {
         self.nodes.insert(Node::create_node(edge))
     }
 
-
+    pub fn iter(&self, tensor: &CompGraphTensor) -> EngineTensorIterator<T> {
+        EngineTensorIterator::new(self.get_node(tensor.node_key()).unwrap().tensor().unwrap())
+    }
 
     //First return is open nodes, second is node_to_children
     //The algorithm is more efficient if done at the same time
@@ -140,7 +148,7 @@ impl<T: AllowedUnit> CompGraph<T> {
     }
 
     //Uses Kahn's Algorithm
-    pub fn populating_eval(&mut self, target: NodeKey) -> Result<(), ComputationGraphError> {
+    fn populating_eval_node(&mut self, target: NodeKey) -> Result<(), ComputationGraphError> {
         //Nodes that have all dependencies satisfied
         let (open_roots, node_to_children) = self.generate_node_to_children(&target)?;
 
@@ -181,7 +189,11 @@ impl<T: AllowedUnit> CompGraph<T> {
         Ok(())
     }
 
-    pub fn non_populating_eval(&mut self, target: NodeKey) -> Result<(), ComputationGraphError> {
+    pub fn populating_eval(&mut self, target: &CompGraphTensor) -> Result<(), ComputationGraphError> {
+        self.populating_eval_node(*target.node_key())
+    }
+
+    fn non_populating_eval_node(&mut self, target: NodeKey) -> Result<(), ComputationGraphError> {
         //Nodes that have all dependencies satisfied
         let (open_roots, node_to_children) = self.generate_node_to_children(&target)?;
 
@@ -240,52 +252,75 @@ impl<T: AllowedUnit> CompGraph<T> {
         Ok(())
     }
 
-    pub fn abs<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, a: NodeKey) -> NodeKey {
-        self.create_node(Edge::Abs(a, E::abs::<F>))
+    pub fn non_populating_eval(&mut self, target: &CompGraphTensor) -> Result<(), ComputationGraphError> {
+        self.non_populating_eval_node(*target.node_key())
     }
 
-    pub fn neg<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, a: NodeKey) -> NodeKey {
-        self.create_node(Edge::Neg(a, E::neg::<F>))
+    pub fn abs<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, a: &CompGraphTensor) -> CompGraphTensor {
+        CompGraphTensor::new(self.create_node(Edge::Abs(*a.node_key(), E::abs::<F>)))
     }
 
-    pub fn add_scalar<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, s: T, a: NodeKey) -> NodeKey {
-        self.create_node(Edge::AddScalar(s, a, E::add_scalar::<F>))
+    pub fn neg<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, a: &CompGraphTensor) -> CompGraphTensor {
+        CompGraphTensor::new(self.create_node(Edge::Neg(*a.node_key(), E::neg::<F>)))
     }
 
-    pub fn sub_scalar_lh<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, s: T, a: NodeKey) -> NodeKey {
-        self.create_node(Edge::SubScalarLH(s, a, E::sub_scalar_lh::<F>))
+    pub fn add_scalar<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, s: T, a: &CompGraphTensor) -> CompGraphTensor {
+        CompGraphTensor::new(self.create_node(Edge::AddScalar(s, *a.node_key(), E::add_scalar::<F>)))
     }
 
-    pub fn sub_scalar_rh<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, a: NodeKey, s: T) -> NodeKey {
-        self.create_node(Edge::SubScalarRH(a, s, E::sub_scalar_rh::<F>))
+    pub fn sub_scalar_lh<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, s: T, a: &CompGraphTensor) -> CompGraphTensor {
+        CompGraphTensor::new(self.create_node(Edge::SubScalarLH(s, *a.node_key(), E::sub_scalar_lh::<F>)))
     }
 
-    pub fn mul_scalar<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, s: T, a: NodeKey) -> NodeKey {
-        self.create_node(Edge::MulScalar(s, a, E::mul_scalar::<F>))
+    pub fn sub_scalar_rh<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, a: &CompGraphTensor, s: T) -> CompGraphTensor {
+        CompGraphTensor::new(self.create_node(Edge::SubScalarRH(*a.node_key(), s, E::sub_scalar_rh::<F>)))
     }
 
-    pub fn div_scalar_lh<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, s: T, a: NodeKey) -> NodeKey {
-        self.create_node(Edge::DivScalarLH(s, a, E::div_scalar_lh::<F>))
+    pub fn mul_scalar<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, s: T, a: &CompGraphTensor) -> CompGraphTensor {
+        CompGraphTensor::new(self.create_node(Edge::MulScalar(s, *a.node_key(), E::mul_scalar::<F>)))
     }
 
-    pub fn div_scalar_rh<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, a: NodeKey, s: T) -> NodeKey {
-        self.create_node(Edge::DivScalarRH(a, s, E::div_scalar_rh::<F>))
+    pub fn div_scalar_lh<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, s: T, a: &CompGraphTensor) -> CompGraphTensor {
+        CompGraphTensor::new(self.create_node(Edge::DivScalarLH(s, *a.node_key(), E::div_scalar_lh::<F>)))
     }
 
-    pub fn add<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, a: NodeKey, b: NodeKey) -> NodeKey {
-        self.create_node(Edge::Add(a, b, E::add::<F>))
+    pub fn div_scalar_rh<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, a: &CompGraphTensor, s: T) -> CompGraphTensor {
+        CompGraphTensor::new(self.create_node(Edge::DivScalarRH(*a.node_key(), s, E::div_scalar_rh::<F>)))
     }
 
-    pub fn sub<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, a: NodeKey, b: NodeKey) -> NodeKey {
-        self.create_node(Edge::Sub(a, b, E::sub::<F>))
+    pub fn add<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, a: &CompGraphTensor, b: &CompGraphTensor) -> CompGraphTensor {
+        CompGraphTensor::new(self.create_node(Edge::Add(*a.node_key(), *b.node_key(), E::add::<F>)))
     }
 
-    pub fn mul<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, a: NodeKey, b: NodeKey) -> NodeKey {
-        self.create_node(Edge::Mul(a, b, E::mul::<F>))
+    pub fn sub<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, a: &CompGraphTensor, b: &CompGraphTensor) -> CompGraphTensor {
+        CompGraphTensor::new(self.create_node(Edge::Sub(*a.node_key(), *b.node_key(), E::sub::<F>)))
     }
 
-    pub fn div<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, a: NodeKey, b: NodeKey) -> NodeKey {
-        self.create_node(Edge::Div(a, b, E::div::<F>))
+    pub fn mul<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, a: &CompGraphTensor, b: &CompGraphTensor) -> CompGraphTensor {
+        CompGraphTensor::new(self.create_node(Edge::Mul(*a.node_key(), *b.node_key(), E::mul::<F>)))
+    }
+
+    pub fn div<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, a: &CompGraphTensor, b: &CompGraphTensor) -> CompGraphTensor {
+        CompGraphTensor::new(self.create_node(Edge::Div(*a.node_key(), *b.node_key(), E::div::<F>)))
+    }
+}
+
+//External handle for nodes
+//Lifetime tied to graph
+#[derive(Debug, Clone)]
+pub struct CompGraphTensor {
+    node_key: NodeKey,
+}
+
+impl CompGraphTensor {
+    fn new(node_key: NodeKey) -> Self {
+        Self {
+            node_key,
+        }
+    }
+
+    fn node_key(&self) -> &NodeKey {
+        &self.node_key
     }
 }
 
@@ -313,20 +348,20 @@ mod test {
 
     use super::*;
 
-    pub fn init_simple_graph() -> (NodeKey, NodeKey, NodeKey, Box<dyn EngineTensor<Unit = f32>>, CompGraph<f32>) {
+    pub fn init_simple_graph() -> (CompGraphTensor, CompGraphTensor, CompGraphTensor, Box<dyn EngineTensor<Unit = f32>>, CompGraph<f32>) {
         let mut graph = CompGraph::<f32>::new();
 
         let root1 = graph.create_root(Array::from_slice([0.0, 1.0, 2.0, 3.0].as_slice(), Shape::from([2, 2].as_slice())));
         let root2 = graph.create_root(Array::from_slice([0.0, 1.0, 2.0, 3.0].as_slice(), Shape::from([2, 2].as_slice())));
 
-        let added = graph.add::<Basic, Array<f32>>(root1, root2);
+        let added = graph.add::<Basic, Array<f32>>(&root1, &root2);
 
         let expected = Array::from_slice([0.0, 2.0, 4.0, 6.0].as_slice(), Shape::from([2, 2].as_slice()));
 
         return (root1, root2, added, expected, graph);
     }
 
-    pub fn init_complex_graph() -> (NodeKey, Box<dyn EngineTensor<Unit = f32>>, Box<dyn EngineTensor<Unit = f32>>, CompGraph<f32>) {
+    pub fn init_complex_graph() -> (CompGraphTensor, Box<dyn EngineTensor<Unit = f32>>, Box<dyn EngineTensor<Unit = f32>>, CompGraph<f32>) {
         let mut graph = CompGraph::<f32>::new();
 
         let root1 = graph.create_root(Array::from_slice([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0].as_slice(), Shape::from([3, 3].as_slice())));
@@ -334,16 +369,16 @@ mod test {
         let root3 = graph.create_root(Array::from_slice([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0].as_slice(), Shape::from([3, 3].as_slice())));
         let root4 = graph.create_root(Array::from_slice([1.0, 4.0, 9.0, 16.0, 25.0, 36.0, 49.0, 64.0, 81.0].as_slice(), Shape::from([3, 3].as_slice())));
 
-        let op1 = graph.div::<Basic, Array<f32>>(root4, root1);
-        let op2 = graph.mul::<Basic, Array<f32>>(op1, root2);
-        let op3 = graph.sub::<Basic, Array<f32>>(op2, root3);
+        let op1 = graph.div::<Basic, Array<f32>>(&root4, &root1);
+        let op2 = graph.mul::<Basic, Array<f32>>(&op1, &root2);
+        let op3 = graph.sub::<Basic, Array<f32>>(&op2, &root3);
 
-        let op4 = graph.mul_scalar::<Basic, Array<f32>>(2.0, op3);
-        let op5 = graph.div_scalar_rh::<Basic, Array<f32>>(op4, 2.0);
+        let op4 = graph.mul_scalar::<Basic, Array<f32>>(2.0, &op3);
+        let op5 = graph.div_scalar_rh::<Basic, Array<f32>>(&op4, 2.0);
 
-        let op6 = graph.mul::<Basic, Array<f32>>(op5, op5);
+        let op6 = graph.mul::<Basic, Array<f32>>(&op5, &op5);
 
-        let op7 = graph.div::<Basic, Array<f32>>(op6, root1);
+        let op7 = graph.div::<Basic, Array<f32>>(&op6, &root1);
 
         return (op7, Array::from_slice([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0].as_slice(), Shape::from([3, 3].as_slice())), Array::from_slice([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0].as_slice(), Shape::from([3, 3].as_slice())), graph);
     }
@@ -352,9 +387,9 @@ mod test {
     fn simple_no_eval() {
         let (_, _, added, _, graph) = init_simple_graph();
 
-        assert!(graph.get_node(&added).is_some());
+        assert!(graph.get_node(added.node_key()).is_some());
 
-        let node = graph.get_node(&added).unwrap();
+        let node = graph.get_node(added.node_key()).unwrap();
 
         assert!(node.tensor().is_none());
     }
@@ -363,11 +398,11 @@ mod test {
     fn simple_eval() {
         let (_, _, added, expected, mut graph) = init_simple_graph();
 
-        graph.non_populating_eval(added).unwrap();
+        graph.non_populating_eval(&added).unwrap();
 
-        assert!(graph.get_node(&added).is_some());
+        assert!(graph.get_node(added.node_key()).is_some());
 
-        let node = graph.get_node_mut(&added).unwrap();
+        let node = graph.get_node_mut(added.node_key()).unwrap();
 
         assert!(node.tensor().is_some());
 
@@ -375,11 +410,11 @@ mod test {
 
         node.clear_tensor().unwrap();
 
-        graph.populating_eval(added).unwrap();
+        graph.populating_eval(&added).unwrap();
 
-        assert!(graph.get_node(&added).is_some());
+        assert!(graph.get_node(added.node_key()).is_some());
 
-        let node = graph.get_node(&added).unwrap();
+        let node = graph.get_node(added.node_key()).unwrap();
 
         assert!(node.tensor().is_some());
 
@@ -394,20 +429,20 @@ mod test {
 
         let mut out = node_key;
         for _ in  0..2_usize.pow(power as u32) {
-            out = graph.div::<Basic, Array<_>>(out, out);
+            out = graph.div::<Basic, Array<_>>(&out, &out);
         }
 
-        graph.non_populating_eval(out).unwrap();
+        graph.non_populating_eval(&out).unwrap();
 
-        let node = graph.get_node_mut(&out).unwrap();
+        let node = graph.get_node_mut(out.node_key()).unwrap();
 
         assert_eq!(*node.tensor().unwrap(), *expected_unit);
 
         node.clear_tensor().unwrap();
 
-        graph.populating_eval(out).unwrap();
+        graph.populating_eval(&out).unwrap();
 
-        let node = graph.get_node(&out).unwrap();
+        let node = graph.get_node(out.node_key()).unwrap();
 
         assert_eq!(*node.tensor().unwrap(), *expected_unit);
     }
@@ -418,36 +453,36 @@ mod test {
 
         let power = 12u16;
 
-        let mut curr_node_keys: Vec<NodeKey>;
+        let mut curr_node_keys: Vec<CompGraphTensor>;
         let mut new_node_keys = vec![node_key; 2_usize.pow(power as u32)];
 
         while new_node_keys.len() > 1 {
             curr_node_keys = new_node_keys;
-            new_node_keys = Vec::<NodeKey>::new();
+            new_node_keys = Vec::<CompGraphTensor>::new();
 
             for keys in curr_node_keys.chunks_exact(2) {
-                let a_key = keys[0];
-                let b_key = keys[1];
+                let a_key = &keys[0];
+                let b_key = &keys[1];
 
-                new_node_keys.push(graph.add::<Basic, Array<_>>(a_key, b_key));
+                new_node_keys.push(graph.add::<Basic, Array<_>>(&a_key, &b_key));
             }
         }
 
-        let node_key = new_node_keys.last().unwrap();
+        let tensor = new_node_keys.last().unwrap();
 
         let expected = Array::from_iter( &mut expected_original.iter().map(|x| x * 2.0f32.pow(power)), expected_original.shape().clone());
 
-        graph.non_populating_eval(*node_key).unwrap();
+        graph.non_populating_eval(&tensor).unwrap();
 
-        let node = graph.get_node_mut(node_key).unwrap();
+        let node = graph.get_node_mut(tensor.node_key()).unwrap();
 
         assert_eq!(*node.tensor().unwrap(), *expected);
 
         node.clear_tensor().unwrap();
 
-        graph.populating_eval(*node_key).unwrap();
+        graph.populating_eval(tensor).unwrap();
 
-        let node = graph.get_node(node_key).unwrap();
+        let node = graph.get_node(tensor.node_key()).unwrap();
 
         assert_eq!(*node.tensor().unwrap(), *expected);
     }
