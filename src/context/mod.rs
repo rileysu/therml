@@ -41,11 +41,11 @@ impl<T: AllowedUnit, E: Engine<T>> Context<T, E> {
         self.comp_graph.populating_eval(tensor.node).unwrap();
     }
 
-    pub fn from_iter<F: EngineTensorFactory<T>>(&mut self, iter: &mut dyn Iterator<Item = T>, shape: Shape) -> ContextTensor {
+    pub fn from_iter<F: EngineTensorFactory<Unit = T>>(&mut self, iter: &mut dyn Iterator<Item = T>, shape: Shape) -> ContextTensor {
         ContextTensor::new(self.comp_graph.create_root(F::from_iter(iter, shape)))
     }
 
-    pub fn from_slice<F: EngineTensorFactory<T>>(&mut self, slice: &[T], shape: Shape) -> ContextTensor {
+    pub fn from_slice<F: EngineTensorFactory<Unit = T>>(&mut self, slice: &[T], shape: Shape) -> ContextTensor {
         ContextTensor::new(self.comp_graph.create_root(F::from_slice(slice, shape)))
     }
 
@@ -55,51 +55,51 @@ impl<T: AllowedUnit, E: Engine<T>> Context<T, E> {
         Box::from(self.comp_graph.get_node(&tensor.node()).unwrap().tensor().unwrap().iter())
     }
 
-    pub fn abs<F: EngineTensorFactory<T>>(&mut self, a: &ContextTensor) -> ContextTensor {
+    pub fn abs<F: EngineTensorFactory<Unit = T>>(&mut self, a: &ContextTensor) -> ContextTensor {
         ContextTensor::new(self.comp_graph.abs::<E, F>(a.node()))
     }
 
-    pub fn neg<F: EngineTensorFactory<T>>(&mut self, a: &ContextTensor) -> ContextTensor {
+    pub fn neg<F: EngineTensorFactory<Unit = T>>(&mut self, a: &ContextTensor) -> ContextTensor {
         ContextTensor::new(self.comp_graph.neg::<E, F>(a.node()))
     }
 
-    pub fn add_scalar<F: EngineTensorFactory<T>>(&mut self, s: T, a: &ContextTensor) -> ContextTensor {
+    pub fn add_scalar<F: EngineTensorFactory<Unit = T>>(&mut self, s: T, a: &ContextTensor) -> ContextTensor {
         ContextTensor::new(self.comp_graph.add_scalar::<E, F>(s, a.node()))
     }
 
-    pub fn sub_scalar_lh<F: EngineTensorFactory<T>>(&mut self, s: T, a: &ContextTensor) -> ContextTensor {
+    pub fn sub_scalar_lh<F: EngineTensorFactory<Unit = T>>(&mut self, s: T, a: &ContextTensor) -> ContextTensor {
         ContextTensor::new(self.comp_graph.sub_scalar_lh::<E, F>(s, a.node()))
     }
 
-    pub fn sub_scalar_rh<F: EngineTensorFactory<T>>(&mut self, a: &ContextTensor, s: T) -> ContextTensor {
+    pub fn sub_scalar_rh<F: EngineTensorFactory<Unit = T>>(&mut self, a: &ContextTensor, s: T) -> ContextTensor {
         ContextTensor::new(self.comp_graph.sub_scalar_rh::<E, F>(a.node(), s))
     }
 
-    pub fn mul_scalar<F: EngineTensorFactory<T>>(&mut self, s: T, a: &ContextTensor) -> ContextTensor {
+    pub fn mul_scalar<F: EngineTensorFactory<Unit = T>>(&mut self, s: T, a: &ContextTensor) -> ContextTensor {
         ContextTensor::new(self.comp_graph.mul_scalar::<E, F>(s, a.node()))
     }
 
-    pub fn div_scalar_lh<F: EngineTensorFactory<T>>(&mut self, s: T, a: &ContextTensor) -> ContextTensor {
+    pub fn div_scalar_lh<F: EngineTensorFactory<Unit = T>>(&mut self, s: T, a: &ContextTensor) -> ContextTensor {
         ContextTensor::new(self.comp_graph.div_scalar_lh::<E, F>(s, a.node()))
     }
 
-    pub fn div_scalar_rh<F: EngineTensorFactory<T>>(&mut self, a: &ContextTensor, s: T) -> ContextTensor {
+    pub fn div_scalar_rh<F: EngineTensorFactory<Unit = T>>(&mut self, a: &ContextTensor, s: T) -> ContextTensor {
         ContextTensor::new(self.comp_graph.div_scalar_rh::<E, F>(a.node(), s))
     }
 
-    pub fn add<F: EngineTensorFactory<T>>(&mut self, a: &ContextTensor, b: &ContextTensor) -> ContextTensor {
+    pub fn add<F: EngineTensorFactory<Unit = T>>(&mut self, a: &ContextTensor, b: &ContextTensor) -> ContextTensor {
         ContextTensor::new(self.comp_graph.add::<E, F>(a.node(), b.node()))
     }
 
-    pub fn sub<F: EngineTensorFactory<T>>(&mut self, a: &ContextTensor, b: &ContextTensor) -> ContextTensor {
+    pub fn sub<F: EngineTensorFactory<Unit = T>>(&mut self, a: &ContextTensor, b: &ContextTensor) -> ContextTensor {
         ContextTensor::new(self.comp_graph.sub::<E, F>(a.node(), b.node()))
     }
 
-    pub fn mul<F: EngineTensorFactory<T>>(&mut self, a: &ContextTensor, b: &ContextTensor) -> ContextTensor {
+    pub fn mul<F: EngineTensorFactory<Unit = T>>(&mut self, a: &ContextTensor, b: &ContextTensor) -> ContextTensor {
         ContextTensor::new(self.comp_graph.mul::<E, F>(a.node(), b.node()))
     }
 
-    pub fn div<F: EngineTensorFactory<T>>(&mut self, a: &ContextTensor, b: &ContextTensor) -> ContextTensor {
+    pub fn div<F: EngineTensorFactory<Unit = T>>(&mut self, a: &ContextTensor, b: &ContextTensor) -> ContextTensor {
         ContextTensor::new(self.comp_graph.div::<E, F>(a.node(), b.node()))
     }
 }

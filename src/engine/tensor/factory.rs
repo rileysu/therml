@@ -2,15 +2,19 @@ use std::sync::Arc;
 use crate::helper::{Shape, Stride};
 use super::{allowed_unit::{AllowedUnit, AllowedArray, AllowedQuant}, EngineTensor, Array, Quant};
 
-pub trait EngineTensorFactory<T: AllowedUnit>
+pub trait EngineTensorFactory
 where Self: Sized 
 {
-    fn from_iter(iter: impl Iterator<Item = T>, shape: Shape) -> Box<dyn EngineTensor<T>>;
-    fn from_slice(data: &[T], shape: Shape) -> Box<dyn EngineTensor<T>>;
+    type Unit: AllowedUnit;
+
+    fn from_iter(iter: impl Iterator<Item = Self::Unit>, shape: Shape) -> Box<dyn EngineTensor<Unit = Self::Unit>>;
+    fn from_slice(data: &[Self::Unit], shape: Shape) -> Box<dyn EngineTensor<Unit = Self::Unit>>;
 }
 
-impl<T: AllowedArray> EngineTensorFactory<T> for Array<T> {
-    fn from_iter(iter: impl Iterator<Item = T>, shape: Shape) -> Box<dyn EngineTensor<T>> {
+impl<T: AllowedArray> EngineTensorFactory for Array<T> {
+    type Unit = T;
+
+    fn from_iter(iter: impl Iterator<Item = T>, shape: Shape) -> Box<dyn EngineTensor<Unit = Self::Unit>> {
         Box::from(Array {
             stride: Stride::from(&shape), 
             shape, 
@@ -19,7 +23,7 @@ impl<T: AllowedArray> EngineTensorFactory<T> for Array<T> {
         })
     }
 
-    fn from_slice(data: &[T], shape: Shape) -> Box<dyn EngineTensor<T>> {
+    fn from_slice(data: &[T], shape: Shape) -> Box<dyn EngineTensor<Unit = Self::Unit>> {
         Box::from(Array {
             stride: Stride::from(&shape), 
             shape, 
@@ -29,8 +33,10 @@ impl<T: AllowedArray> EngineTensorFactory<T> for Array<T> {
     }
 }
 
-impl<T: AllowedQuant> EngineTensorFactory<T> for Quant<T> {
-    fn from_iter(iter: impl Iterator<Item = T>, shape: Shape) -> Box<dyn EngineTensor<T>> {
+impl<T: AllowedQuant> EngineTensorFactory for Quant<T> {
+    type Unit = T;
+
+    fn from_iter(iter: impl Iterator<Item = T>, shape: Shape) -> Box<dyn EngineTensor<Unit = Self::Unit>> {
         Box::from(Quant {
             stride: Stride::from(&shape), 
             shape, 
@@ -39,7 +45,7 @@ impl<T: AllowedQuant> EngineTensorFactory<T> for Quant<T> {
         })
     }
 
-    fn from_slice(data: &[T], shape: Shape) -> Box<dyn EngineTensor<T>> {
+    fn from_slice(data: &[T], shape: Shape) -> Box<dyn EngineTensor<Unit = Self::Unit>> {
         Box::from(Quant {
             stride: Stride::from(&shape), 
             shape, 

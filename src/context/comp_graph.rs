@@ -9,12 +9,12 @@ use super::edge::Edge;
 
 #[derive(Debug)]
 pub struct Node<T: AllowedUnit> {
-    tensor: Option<Box<dyn EngineTensor<T>>>,
+    tensor: Option<Box<dyn EngineTensor<Unit = T>>>,
     edge: Edge<T>,
 }
 
 impl<T: AllowedUnit> Node<T> {
-    pub fn create_root(tensor: Box<dyn EngineTensor<T>>) -> Self {
+    pub fn create_root(tensor: Box<dyn EngineTensor<Unit = T>>) -> Self {
         Self {
             tensor: Some(tensor),
             edge: Edge::Root,
@@ -28,11 +28,11 @@ impl<T: AllowedUnit> Node<T> {
         }
     }
 
-    pub fn tensor(&self) -> Option<&dyn EngineTensor<T>> {
+    pub fn tensor(&self) -> Option<&dyn EngineTensor<Unit = T>> {
         self.tensor.as_deref()
     }
 
-    pub fn set_tensor(&mut self, tensor: Box<dyn EngineTensor<T>>) {
+    pub fn set_tensor(&mut self, tensor: Box<dyn EngineTensor<Unit = T>>) {
         self.tensor = Some(tensor)
     }
 
@@ -87,7 +87,7 @@ impl<T: AllowedUnit> CompGraph<T> {
     }
 
     //Root is a node that is a starting point for computation
-    pub fn create_root(&mut self, tensor: Box<dyn EngineTensor<T>>) -> NodeKey {
+    pub fn create_root(&mut self, tensor: Box<dyn EngineTensor<Unit = T>>) -> NodeKey {
         self.nodes.insert(Node::create_root(tensor))
     }
 
@@ -193,7 +193,7 @@ impl<T: AllowedUnit> CompGraph<T> {
 
         //Cache for calculated nodes
         //Should be cleared once no dependencies left
-        let mut comp_cache = HashMap::<NodeKey, Box<dyn EngineTensor<T>>>::new();
+        let mut comp_cache = HashMap::<NodeKey, Box<dyn EngineTensor<Unit = T>>>::new();
 
         while let Some(node_key) = open.pop() {
             let node = self.get_node(&node_key).ok_or(ComputationGraphError::NodeDoesNotExist(target))?;
@@ -240,51 +240,51 @@ impl<T: AllowedUnit> CompGraph<T> {
         Ok(())
     }
 
-    pub fn abs<E: Engine<T>, F: EngineTensorFactory<T>>(&mut self, a: NodeKey) -> NodeKey {
+    pub fn abs<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, a: NodeKey) -> NodeKey {
         self.create_node(Edge::Abs(a, E::abs::<F>))
     }
 
-    pub fn neg<E: Engine<T>, F: EngineTensorFactory<T>>(&mut self, a: NodeKey) -> NodeKey {
+    pub fn neg<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, a: NodeKey) -> NodeKey {
         self.create_node(Edge::Neg(a, E::neg::<F>))
     }
 
-    pub fn add_scalar<E: Engine<T>, F: EngineTensorFactory<T>>(&mut self, s: T, a: NodeKey) -> NodeKey {
+    pub fn add_scalar<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, s: T, a: NodeKey) -> NodeKey {
         self.create_node(Edge::AddScalar(s, a, E::add_scalar::<F>))
     }
 
-    pub fn sub_scalar_lh<E: Engine<T>, F: EngineTensorFactory<T>>(&mut self, s: T, a: NodeKey) -> NodeKey {
+    pub fn sub_scalar_lh<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, s: T, a: NodeKey) -> NodeKey {
         self.create_node(Edge::SubScalarLH(s, a, E::sub_scalar_lh::<F>))
     }
 
-    pub fn sub_scalar_rh<E: Engine<T>, F: EngineTensorFactory<T>>(&mut self, a: NodeKey, s: T) -> NodeKey {
+    pub fn sub_scalar_rh<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, a: NodeKey, s: T) -> NodeKey {
         self.create_node(Edge::SubScalarRH(a, s, E::sub_scalar_rh::<F>))
     }
 
-    pub fn mul_scalar<E: Engine<T>, F: EngineTensorFactory<T>>(&mut self, s: T, a: NodeKey) -> NodeKey {
+    pub fn mul_scalar<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, s: T, a: NodeKey) -> NodeKey {
         self.create_node(Edge::MulScalar(s, a, E::mul_scalar::<F>))
     }
 
-    pub fn div_scalar_lh<E: Engine<T>, F: EngineTensorFactory<T>>(&mut self, s: T, a: NodeKey) -> NodeKey {
+    pub fn div_scalar_lh<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, s: T, a: NodeKey) -> NodeKey {
         self.create_node(Edge::DivScalarLH(s, a, E::div_scalar_lh::<F>))
     }
 
-    pub fn div_scalar_rh<E: Engine<T>, F: EngineTensorFactory<T>>(&mut self, a: NodeKey, s: T) -> NodeKey {
+    pub fn div_scalar_rh<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, a: NodeKey, s: T) -> NodeKey {
         self.create_node(Edge::DivScalarRH(a, s, E::div_scalar_rh::<F>))
     }
 
-    pub fn add<E: Engine<T>, F: EngineTensorFactory<T>>(&mut self, a: NodeKey, b: NodeKey) -> NodeKey {
+    pub fn add<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, a: NodeKey, b: NodeKey) -> NodeKey {
         self.create_node(Edge::Add(a, b, E::add::<F>))
     }
 
-    pub fn sub<E: Engine<T>, F: EngineTensorFactory<T>>(&mut self, a: NodeKey, b: NodeKey) -> NodeKey {
+    pub fn sub<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, a: NodeKey, b: NodeKey) -> NodeKey {
         self.create_node(Edge::Sub(a, b, E::sub::<F>))
     }
 
-    pub fn mul<E: Engine<T>, F: EngineTensorFactory<T>>(&mut self, a: NodeKey, b: NodeKey) -> NodeKey {
+    pub fn mul<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, a: NodeKey, b: NodeKey) -> NodeKey {
         self.create_node(Edge::Mul(a, b, E::mul::<F>))
     }
 
-    pub fn div<E: Engine<T>, F: EngineTensorFactory<T>>(&mut self, a: NodeKey, b: NodeKey) -> NodeKey {
+    pub fn div<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, a: NodeKey, b: NodeKey) -> NodeKey {
         self.create_node(Edge::Div(a, b, E::div::<F>))
     }
 }
@@ -313,7 +313,7 @@ mod test {
 
     use super::*;
 
-    pub fn init_simple_graph() -> (NodeKey, NodeKey, NodeKey, Box<dyn EngineTensor<f32>>, CompGraph<f32>) {
+    pub fn init_simple_graph() -> (NodeKey, NodeKey, NodeKey, Box<dyn EngineTensor<Unit = f32>>, CompGraph<f32>) {
         let mut graph = CompGraph::<f32>::new();
 
         let root1 = graph.create_root(Array::from_slice([0.0, 1.0, 2.0, 3.0].as_slice(), Shape::from([2, 2].as_slice())));
@@ -326,7 +326,7 @@ mod test {
         return (root1, root2, added, expected, graph);
     }
 
-    pub fn init_complex_graph() -> (NodeKey, Box<dyn EngineTensor<f32>>, Box<dyn EngineTensor<f32>>, CompGraph<f32>) {
+    pub fn init_complex_graph() -> (NodeKey, Box<dyn EngineTensor<Unit = f32>>, Box<dyn EngineTensor<Unit = f32>>, CompGraph<f32>) {
         let mut graph = CompGraph::<f32>::new();
 
         let root1 = graph.create_root(Array::from_slice([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0].as_slice(), Shape::from([3, 3].as_slice())));

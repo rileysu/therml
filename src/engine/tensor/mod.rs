@@ -1,24 +1,31 @@
+pub mod extension;
 pub mod iter;
 pub mod basic;
-pub mod block;
 pub mod allowed_unit;
 pub mod factory;
 
 use std::sync::Arc;
+
 use crate::helper::{Shape, Stride, Position, Slice};
+use self::extension::{ExtensionProvider, EmptyExtensionProvider};
 use self::{iter::EngineTensorIterator, allowed_unit::{AllowedUnit, AllowedArray, AllowedQuant}};
 use std::fmt::Debug;
 
-pub trait EngineTensor<T: AllowedUnit>: Debug {
+
+
+pub trait EngineTensor<>: Debug {
+    type Unit: AllowedUnit;
+
     fn shape(&self) -> &Shape;
     fn stride(&self) -> &Stride;
-    fn get(&self, pos: &Position) -> T;
-    fn iter(&self) -> EngineTensorIterator<'_, T>;
-    fn slice(&self, slice: &Slice) -> Box<dyn EngineTensor<T>>;
-    fn reshape(&self, shape: Shape) -> Box<dyn EngineTensor<T>>;
+    fn get(&self, pos: &Position) -> Self::Unit;
+    fn iter(&self) -> EngineTensorIterator<'_, Self::Unit>;
+    fn slice(&self, slice: &Slice) -> Box<dyn EngineTensor<Unit = Self::Unit>>;
+    fn reshape(&self, shape: Shape) -> Box<dyn EngineTensor<Unit = Self::Unit>>;
+    fn extensions(&self)-> Box<dyn ExtensionProvider + '_>;
 }
 
-impl<T: AllowedUnit> PartialEq for dyn EngineTensor<T> + '_ {
+impl<T: AllowedUnit> PartialEq for dyn EngineTensor<Unit = T> + '_ {
     fn eq(&self, other: &Self) -> bool {
         self.shape() == other.shape() && self.iter().zip(other.iter()).all(|(a, b)| a == b)
     }
@@ -32,7 +39,9 @@ pub struct Array<T: AllowedArray> {
     offset: usize,
 }
 
-impl<T: AllowedArray> EngineTensor<T> for Array<T> {
+impl<T: AllowedArray> EngineTensor for Array<T> {
+    type Unit = T;
+
     fn shape(&self) -> &Shape {
         &self.shape
     }
@@ -51,7 +60,7 @@ impl<T: AllowedArray> EngineTensor<T> for Array<T> {
         EngineTensorIterator::new(self)
     }
 
-    fn slice(&self, slice: &Slice) -> Box<dyn EngineTensor<T>> {
+    fn slice(&self, slice: &Slice) -> Box<dyn EngineTensor<Unit = T>> {
         let offset = slice.start().index(self.stride()).unwrap();
 
         Box::from(Self {
@@ -62,8 +71,12 @@ impl<T: AllowedArray> EngineTensor<T> for Array<T> {
         })
     }
 
-    fn reshape(&self, shape: Shape) -> Box<dyn EngineTensor<T>> {
+    fn reshape(&self, shape: Shape) -> Box<dyn EngineTensor<Unit = T>> {
         todo!()
+    }
+
+    fn extensions(&self) -> Box<dyn ExtensionProvider + '_> {
+        Box::from(EmptyExtensionProvider::from(self))
     }
 }
 
@@ -75,7 +88,9 @@ pub struct Quant<T: AllowedQuant> {
     offset: usize,
 }
 
-impl<T: AllowedQuant> EngineTensor<T> for Quant<T> {
+impl<T: AllowedQuant> EngineTensor for Quant<T> {
+    type Unit = T;
+
     fn shape(&self) -> &Shape {
         &self.shape
     }
@@ -94,7 +109,7 @@ impl<T: AllowedQuant> EngineTensor<T> for Quant<T> {
         EngineTensorIterator::new(self)
     }
 
-    fn slice(&self, slice: &Slice) -> Box<dyn EngineTensor<T>> {
+    fn slice(&self, slice: &Slice) -> Box<dyn EngineTensor<Unit = T>> {
         let offset = slice.start().index(self.stride()).unwrap();
 
         Box::from(Self {
@@ -105,69 +120,11 @@ impl<T: AllowedQuant> EngineTensor<T> for Quant<T> {
         })
     }
 
-    fn reshape(&self, shape: Shape) -> Box<dyn EngineTensor<T>> {
+    fn reshape(&self, shape: Shape) -> Box<dyn EngineTensor<Unit = T>> {
         todo!()
     }
-}
-/*#[derive(Debug)]
-pub struct EngineTensor<T: AllowedUnit> {
-    specs: EngineTensorSpecs<T>,
-    stride: Stride,
-    shape: Shape,
-}
 
-impl<T: AllowedUnit> EngineTensor<T> {
-    pub fn shape(&self) -> &Shape {
-        &self.shape
-    }
-
-    pub fn stride(&self) -> &Stride {
-        &self.stride
-    }
-
-    pub fn get(&self, pos: &Position) -> T {
-        match &self.specs {
-            EngineTensorSpecs::Array { data, offset} => {
-                let index = pos.index(&self.stride).unwrap() + offset;
-
-                *data.as_ref().get(index).unwrap()
-            },
-            EngineTensorSpecs::Quant { .. } => {
-                unimplemented!()
-            },
-        }
-    }
-
-    pub fn iter(&self) -> EngineTensorIterator<'_, T> {
-        EngineTensorIterator::new(self)
-    }
-
-    pub fn slice(&self, slice: &Slice) -> Self {
-        let offset = slice.start().index(self.stride()).unwrap();
-
-        match &self.specs {
-            EngineTensorSpecs::Array { data, .. } => Self {
-                specs: EngineTensorSpecs::Array { data: data.clone(), offset },
-                stride: self.stride.clone(),
-                shape: self.shape.clone(),
-            },
-            EngineTensorSpecs::Quant { data, .. } => Self {
-                specs: EngineTensorSpecs::Quant { data: data.clone(), offset },
-                stride: self.stride.clone(),
-                shape: self.shape.clone(),
-            },
-        }
-    }
-
-    pub fn reshape(&self, shape: Shape) -> Self {
-        todo!()
+    fn extensions(&self) -> Box<dyn ExtensionProvider + '_> {
+        Box::from(EmptyExtensionProvider::from(self))
     }
 }
-
-impl<T: AllowedUnit> PartialEq for EngineTensor<T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.shape() == other.shape() && self.iter().zip(other.iter()).all(|(a, b)| a == b)
-    }
-}
-impl<T: AllowedUnit> Eq for EngineTensor<T> {}*/
-

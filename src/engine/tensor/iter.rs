@@ -5,14 +5,14 @@ use super::{allowed_unit::AllowedUnit, EngineTensor};
 //It can be enhanced by fetching chunks of contig memory if available
 
 pub struct EngineTensorIterator<'a, T: AllowedUnit> {
-    tensor: &'a dyn EngineTensor<T>,
+    tensor: &'a dyn EngineTensor<Unit = T>,
     curr: Position,
     finish: Position,
     ended: bool,
 }
 
 impl<'a, T: AllowedUnit> EngineTensorIterator<'a, T> {
-    pub fn new(tensor: &'a dyn EngineTensor<T>) -> Self {
+    pub fn new(tensor: &'a dyn EngineTensor<Unit = T>) -> Self {
         Self {
             tensor,
             curr: tensor.shape().first(),
