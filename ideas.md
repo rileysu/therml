@@ -21,6 +21,48 @@
 - Tensors all have an implicit ordering of position indexes which follows the significance from left being most significant and right being least significant
 - Iterators between positions, reshaping all operate on this idea
 
+## Algorithms
+
+### Conv2d
+```
+a1: (batches, in_channels, y, x)
+k1: (out_channels, in_channels, k_y, k_x)
+
+---
+
+let a2: (batches, out_channels, in_channels, y, x) = a1.broadcast_splice([out_channels], 1)
+let k2: (batches, out_channels, in_channels, k_y, k_x) = k1.broadcast_splice([batches], 0)
+
+let k_half_len_y = (k_y // 2)
+let k_half_len_x = (k_x // 2)
+
+let start_y = k_half_len_y
+let end_y = y - start_y
+let start_x = k_half_len_x
+let end_x = x - start_x
+
+let mut out_units = 
+
+for curr_y in start_y..end_y {
+    for curr_x in start_x..end_x {
+        let a3: (batches, out_channels, in_channels, k_y, k_x) = a2.slice([:, :, :, curr_y-k_half_len_y:curr_y+k_half_len_y, curr_x-k_half_len_x:curr_x+k_half_len_x])
+
+        let r1: (batches, out_channels, in_channels, k_y, k_x) = a3 * k2
+
+        let r2: (batches, out_channels, in_channels * k_y * k_x) = r1.reshape([batches, out_channels, in_channels, k_y * k_x])
+
+        let r3: (batches, out_channels, 1) = r2.sum()
+
+        // batches, x, y
+        out_units.extend(r3.iter_unit())
+    }
+}
+
+return tensor::from_slice(&out_units): (y, x, batches, out_channels)
+
+
+```
+
 ## TODO
 
 - Refactor comp_graph to improve errors (ones with no nodekey) and reduce repeated code

@@ -5,7 +5,7 @@ use std::collections::{HashSet, HashMap};
 use slotmap::{SlotMap, new_key_type};
 use thiserror::Error;
 
-use crate::engine::{tensor::{EngineTensor, allowed_unit::AllowedUnit, factory::EngineTensorFactory, iter::EngineTensorIterator}, Engine, EngineError};
+use crate::engine::{tensor::{EngineTensor, allowed_unit::AllowedUnit, factory::EngineTensorFactory, iter::EngineTensorUnitIterator}, Engine, EngineError};
 
 use self::edge::Edge;
 
@@ -101,8 +101,8 @@ impl<T: AllowedUnit> CompGraph<T> {
         self.nodes.insert(Node::create_node(edge))
     }
 
-    pub fn iter(&self, tensor: &CompGraphTensor) -> EngineTensorIterator<T> {
-        EngineTensorIterator::new(self.get_node(tensor.node_key()).unwrap().tensor().unwrap())
+    pub fn iter(&self, tensor: &CompGraphTensor) -> EngineTensorUnitIterator<T> {
+        EngineTensorUnitIterator::new(self.get_node(tensor.node_key()).unwrap().tensor().unwrap())
     }
 
     //First return is open nodes, second is node_to_children
@@ -470,7 +470,7 @@ mod test {
 
         let tensor = new_node_keys.last().unwrap();
 
-        let expected = Array::from_iter( &mut expected_original.iter().map(|x| x * 2.0f32.pow(power)), expected_original.shape().clone());
+        let expected = Array::from_iter( &mut expected_original.iter_unit().map(|x| x * 2.0f32.pow(power)), expected_original.shape().clone());
 
         graph.non_populating_eval(&tensor).unwrap();
 

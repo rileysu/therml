@@ -22,6 +22,14 @@ impl Shape {
         self.0.iter().product()
     }
 
+    pub fn dim(&self, ind: usize) -> usize {
+        self.0[ind]
+    }
+
+    pub fn dims(&self) -> usize {
+        self.0.len()
+    }
+
     //first valid position
     pub fn first(&self) -> Position {
         Position::new(vec![0; self.as_boxed_slice().len()].into())
@@ -54,3 +62,10 @@ impl Display for Shape {
         write!(f, "({})", conv_sizes.join(","))
     }
 }
+
+macro_rules! shape {
+    ($($x:expr),+) => {
+        Shape::from([$($x),+].as_slice())
+    };
+}
+pub(crate) use shape;

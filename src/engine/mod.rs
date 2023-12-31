@@ -3,7 +3,7 @@ pub mod basic;
 
 mod util;
 
-use crate::helper::Shape;
+use crate::helper::{Shape, PositionError};
 use self::tensor::{EngineTensor, allowed_unit::AllowedUnit, factory::EngineTensorFactory};
 use thiserror::Error;
 
@@ -29,12 +29,21 @@ pub trait Engine<T: AllowedUnit> {
     fn sub<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>, b: &dyn EngineTensor<Unit = T>) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
     fn mul<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>, b: &dyn EngineTensor<Unit = T>) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
     fn div<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>, b: &dyn EngineTensor<Unit = T>) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
+
+    //Conv
+    fn conv2d<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>, kernel: &dyn EngineTensor<Unit = T>, stride: usize) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
 }
 
 #[derive(Error, Debug)]
 pub enum EngineError {
-    #[error("The tensor of size {0} does not match {1}")]
+    #[error("The tensor of shape {0} does not match expected {1}")]
     ShapeMismatch(Shape, Shape),
+    #[error("The dimension {0} does not match expected {1}")]
+    DimensionMismatch(usize, usize),
+    #[error("Got {0} dimensions but expected {1}")]
+    IncorrectDimensions(usize, usize),
+    #[error("Position operation failed: {0}")]
+    Tensor(#[from] PositionError),
     #[error("The operation is not supported on this data type")]
     OperationUnsupportedForType(),
 }

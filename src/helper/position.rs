@@ -18,7 +18,7 @@ impl Position {
         &mut self.0
     }
 
-    pub fn index(&self, stride: &Stride) -> Result<usize, PositionError> {
+    pub fn tensor_index(&self, stride: &Stride) -> Result<usize, PositionError> {
         let position_length = stride.as_boxed_slice().len();
         let stride_length = stride.as_boxed_slice().len();
 
@@ -35,7 +35,7 @@ impl Position {
     pub fn incdec_mut(&mut self, bounds: &Shape, off: i64) {
         let mut curr = off;
         
-        for i in (0..bounds.as_boxed_slice().len()).rev() {
+        for i in (0..bounds.dims()).rev() {
             let signed_bound = bounds[i] as i64;
 
             curr += self[i] as i64;

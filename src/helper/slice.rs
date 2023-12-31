@@ -45,6 +45,14 @@ impl Interval {
         }
     }
 
+    pub fn between_with_step(start: usize, finish: usize, step: usize) -> Self {
+        Self {
+            start: Some(start),
+            finish: Some(finish),
+            step: Some(step),
+        }
+    }
+
     pub fn all() -> Self {
         Self {
             start: None,
