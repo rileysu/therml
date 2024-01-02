@@ -1,4 +1,4 @@
-use crate::helper::Shape;
+use crate::helper::{Shape, VarArrayCompatible};
 
 use super::EngineError;
 
@@ -11,12 +11,12 @@ pub fn return_if_matched_shape<T>(a: &Shape, b: &Shape, out: T) -> Result<T, Eng
 }
 
 pub fn err_if_incorrect_dimensions(a: &Shape, expected_dims: usize) -> Result<(), EngineError> {
-    let a_dims = a.dims();
+    let a_dims = a.len();
 
     if a_dims == expected_dims {
         Ok(())
     } else {
-        Err(EngineError::IncorrectDimensions(a_dims, expected_dims))
+        Err(EngineError::DimensionsMismatch(a_dims, expected_dims))
     }
 }
 

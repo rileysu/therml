@@ -2,11 +2,11 @@ pub mod extension;
 pub mod iter;
 pub mod allowed_unit;
 pub mod factory;
-pub mod padded;
+//pub mod padded;
 
 use std::sync::Arc;
 
-use crate::helper::{Shape, Stride, Position, Slice};
+use crate::helper::{Shape, Stride, Position, Slice, VarArrayCompatible};
 use self::extension::{ExtensionProvider, EmptyExtensionProvider};
 use self::factory::EngineTensorFactory;
 use self::{iter::EngineTensorUnitIterator, allowed_unit::{AllowedUnit, AllowedArray, AllowedQuant}};
@@ -18,7 +18,6 @@ pub trait EngineTensor: Debug {
     type Unit: AllowedUnit;
 
     fn shape(&self) -> &Shape;
-    fn stride(&self) -> &Stride;
     fn get(&self, pos: &Position) -> Self::Unit;
     fn iter_unit(&self) -> EngineTensorUnitIterator<'_, Self::Unit>;
 
@@ -51,7 +50,7 @@ impl<T: AllowedArray> Array<T> {
     fn is_contiguous(&self) -> bool {
         let mut check: Option<usize> = None;
 
-        for curr in self.stride().as_boxed_slice().iter().copied() {
+        for curr in self.stride.iter() {
             match check {
                 Some(prev) => {
                     if prev * prev == curr {
@@ -77,10 +76,6 @@ impl<T: AllowedArray> EngineTensor for Array<T> {
         &self.shape
     }
 
-    fn stride(&self) -> &Stride {
-        &self.stride
-    }
-
     fn get(&self, pos: &Position) -> T {
         let index = pos.tensor_index(&self.stride).unwrap() + self.offset;
 
@@ -101,7 +96,7 @@ impl<T: AllowedArray> EngineTensor for Array<T> {
     }
 
     fn slice(&self, slice: &Slice) -> Box<dyn EngineTensor<Unit = T>> {
-        let offset = slice.start().tensor_index(self.stride()).unwrap();
+        let offset = slice.start().tensor_index(&self.stride).unwrap();
 
         Box::from(Self {
             stride: self.stride.clone(),
@@ -117,7 +112,7 @@ impl<T: AllowedArray> EngineTensor for Array<T> {
         if shape.len() == self.shape().len() {
             if self.is_contiguous() {
                 Box::new(Array::<T> {
-                    stride: Stride::from(shape),
+                    stride: Stride::default_from_shape(shape),
                     shape: shape.clone(),
                     data: self.data.clone(),
                     offset: self.offset,
@@ -131,16 +126,16 @@ impl<T: AllowedArray> EngineTensor for Array<T> {
     }
 
     fn broadcast_splice(&self, pos: usize, sub: &[usize]) -> Box<dyn EngineTensor<Unit = Self::Unit>> {
-        if pos <= self.shape().dims() {
-            let mut shape_buffer = self.shape().as_boxed_slice().to_vec();
+        if pos <= self.shape().len() {
+            let mut shape_buffer = self.shape().as_slice().to_vec();
             shape_buffer.splice(pos..pos, sub.iter().copied());
 
-            let broadcast_shape = Shape::new(shape_buffer.into());
+            let broadcast_shape = Shape::new(shape_buffer.as_slice().into());
 
-            let mut stride_buffer = self.stride().as_boxed_slice().to_vec();
+            let mut stride_buffer = self.stride.as_slice().to_vec();
             stride_buffer.splice(pos..pos, std::iter::repeat(0).take(sub.len()));
 
-            let broadcast_stride = Stride::new(stride_buffer.into());
+            let broadcast_stride = Stride::new(stride_buffer.as_slice().into());
 
             Box::new(Self {
                 stride: broadcast_stride,
@@ -173,10 +168,6 @@ impl<T: AllowedQuant> EngineTensor for Quant<T> {
         &self.shape
     }
 
-    fn stride(&self) -> &Stride {
-        &self.stride
-    }
-
     fn get(&self, pos: &Position) -> T {
         let index = pos.tensor_index(&self.stride).unwrap() + self.offset;
 
@@ -197,7 +188,7 @@ impl<T: AllowedQuant> EngineTensor for Quant<T> {
     }
 
     fn slice(&self, slice: &Slice) -> Box<dyn EngineTensor<Unit = T>> {
-        let offset = slice.start().tensor_index(self.stride()).unwrap();
+        let offset = slice.start().tensor_index(&self.stride).unwrap();
 
         Box::from(Self {
             stride: self.stride.clone(),
@@ -212,16 +203,16 @@ impl<T: AllowedQuant> EngineTensor for Quant<T> {
     }
 
     fn broadcast_splice(&self, pos: usize, sub: &[usize]) -> Box<dyn EngineTensor<Unit = Self::Unit>> {
-        if pos <= self.shape().dims() {
-            let mut shape_buffer = self.shape().as_boxed_slice().to_vec();
+        if pos <= self.shape().len() {
+            let mut shape_buffer = self.shape().as_slice().to_vec();
             shape_buffer.splice(pos..pos, sub.iter().copied());
 
-            let broadcast_shape = Shape::new(shape_buffer.into());
+            let broadcast_shape = Shape::new(shape_buffer.as_slice().into());
 
-            let mut stride_buffer = self.stride().as_boxed_slice().to_vec();
+            let mut stride_buffer = self.stride.as_slice().to_vec();
             stride_buffer.splice(pos..pos, std::iter::repeat(0).take(sub.len()));
 
-            let broadcast_stride = Stride::new(stride_buffer.into());
+            let broadcast_stride = Stride::new(stride_buffer.as_slice().into());
 
             Box::new(Self {
                 stride: broadcast_stride,

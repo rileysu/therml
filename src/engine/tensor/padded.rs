@@ -1,4 +1,4 @@
-use crate::helper::{Shape, Stride, Position};
+use crate::helper::{Shape, Stride, Position, VarArrayCompatible};
 use super::{EngineTensor, allowed_unit::AllowedUnit, factory::EngineTensorFactory, iter::EngineTensorUnitIterator};
 
 pub trait AllowedPadded: AllowedUnit {}
@@ -7,8 +7,10 @@ impl<T: AllowedUnit> AllowedPadded for T {}
 #[derive(Debug)]
 pub struct Padded<T: AllowedPadded> {
     tensor: Box<dyn EngineTensor<Unit = T>>,
-    stride: Stride,
+
     shape: Shape,
+    steps: Box<[usize]>,
+    start: Position,
 
     high_padding: Box<[usize]>,
     low_padding: Box<[usize]>,
@@ -18,17 +20,20 @@ pub struct Padded<T: AllowedPadded> {
 
 impl<T: AllowedPadded> Padded<T> {
     pub fn pad_from(a: Box<dyn EngineTensor<Unit = T>>, padding: Shape, padding_val: T) -> Self {
-        if a.shape().dims() == padding.dims() {
-            let shape = Shape::new(a.shape().as_boxed_slice().iter().zip(padding.as_boxed_slice().iter()).map(|(o, p)| o + 2 * p).collect());
-            let stride = Stride::from(&shape);
+        if a.shape().len() == padding.len() {
+            let shape = Shape::new(a.shape().iter().zip(padding.iter()).map(|(o, p)| o + 2 * p).collect());
+            let steps = shape.clone();
+            let start = shape.first();
 
-            let high_padding = a.shape().as_boxed_slice().iter().zip(padding.as_boxed_slice().iter()).map(|(o, p)| o + p).collect();
-            let low_padding = padding.as_boxed_slice().clone();
+            let high_padding = a.shape().iter().zip(padding.iter()).map(|(o, p)| o + p).collect();
+            let low_padding = padding.clone();
             
             Self {
                 tensor: a,
-                stride,
+
                 shape,
+                steps,
+                start,
 
                 high_padding,
                 low_padding,
@@ -39,6 +44,11 @@ impl<T: AllowedPadded> Padded<T> {
             todo!()
         }
     }
+
+    fn relative_to_absolute_pos(&self, rel_pos: &Position) -> Position {
+        //TODO add errors
+       self.start.add(rel_pos).unwrap()
+    }
 }
 
 impl<T: AllowedPadded> EngineTensor for Padded<T> {
@@ -48,11 +58,10 @@ impl<T: AllowedPadded> EngineTensor for Padded<T> {
         &self.shape
     }
 
-    fn stride(&self) -> &Stride {
-        &self.stride
-    }
-
     fn get(&self, pos: &Position) -> Self::Unit {
+        //Allocation for every get call is poor performance wise...
+        let pos = self.relative_to_absolute_pos(pos);
+
         if pos.within_bounds(self.shape()) {
             let pos_in_unpadded_bounds = pos.as_boxed_slice().iter().zip(self.high_padding.iter()).zip(self.low_padding.iter()).all(|((pos, low), hi)| (*low..*hi).contains(pos));
 

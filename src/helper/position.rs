@@ -1,29 +1,17 @@
-use std::ops::{Index, IndexMut};
-use super::{Stride, Shape};
+use super::{Stride, Shape, VarArray, VarArrayCompatible};
 use thiserror::Error;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub struct Position(Box<[usize]>);
+pub struct Position(VarArray);
 
 impl Position {
-    pub fn new(data: Box<[usize]>) -> Self {
-        Self(data)
-    }
-
-    pub fn as_boxed_slice(&self) -> &Box<[usize]> {
-        &self.0
-    }
-
-    pub fn as_mut_boxed_slice(&mut self) -> &mut Box<[usize]> {
-        &mut self.0
-    }
-
+    //Could be interpreted as implementation specific and may not belong in position
     pub fn tensor_index(&self, stride: &Stride) -> Result<usize, PositionError> {
-        let position_length = stride.as_boxed_slice().len();
-        let stride_length = stride.as_boxed_slice().len();
+        let position_length = stride.len();
+        let stride_length = stride.len();
 
         if position_length == stride_length {
-            Ok(self.as_boxed_slice().iter().zip(stride.as_boxed_slice().iter()).map(|(p, s)| p * s).sum())
+            Ok(self.iter().zip(stride.iter()).map(|(p, s)| p * s).sum())
         } else {
             Err(PositionError::StrideLengthMismatch(position_length, stride_length))
         }
@@ -35,11 +23,11 @@ impl Position {
     pub fn incdec_mut(&mut self, bounds: &Shape, off: i64) {
         let mut curr = off;
         
-        for i in (0..bounds.dims()).rev() {
-            let signed_bound = bounds[i] as i64;
+        for i in (0..bounds.len()).rev() {
+            let signed_bound = bounds.get(i).unwrap() as i64;
 
-            curr += self[i] as i64;
-            self[i] = curr.rem_euclid(signed_bound) as usize;
+            curr += self.get(i).unwrap() as i64;
+            *self.get_mut(i).unwrap() = curr.rem_euclid(signed_bound) as usize;
             curr = curr.div_euclid(signed_bound);
         }
     }
@@ -53,34 +41,38 @@ impl Position {
     }
 
     pub fn within_bounds(&self, bounds: &Shape) -> bool {
-        self.as_boxed_slice().iter().zip(bounds.as_boxed_slice().iter()).all(|(p, s)| p < s)
+        self.iter().zip(bounds.iter()).all(|(p, s)| p < s)
+    }
+}
+
+impl VarArrayCompatible for Position {
+    fn new(varr: VarArray) -> Self {
+        Self(varr)
+    }
+
+    fn vararray(&self) -> &VarArray {
+        &self.0
+    }
+
+    fn vararray_mut(&mut self) -> &mut VarArray {
+        &mut self.0
     }
 }
 
 impl From<&[usize]> for Position {
     fn from(value: &[usize]) -> Self {
-        Self(Box::from(value))
-    }
-}
-
-impl Index<usize> for Position {
-    type Output = usize;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.as_boxed_slice()[index]
-    }
-}
-
-impl IndexMut<usize> for Position {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        &mut self.as_mut_boxed_slice()[index]
+        Self(VarArray::from(value))
     }
 }
 
 #[derive(Error, Debug)]
 pub enum PositionError {
-    #[error("stride length was: {0}, expected: {1}")]
-    StrideLengthMismatch(usize, usize)
+    #[error("Stride length was: {0}, expected: {1}")]
+    StrideLengthMismatch(usize, usize),
+    #[error("Got {0} dimensions but expected {1}")]
+    DimensionsMismatch(usize, usize),
+    #[error("Overflow or underflow for: {0} and {1}")]
+    OperationOverUnderFlow(usize, usize),
 }
 
 mod test {
@@ -97,7 +89,7 @@ mod test {
         ];
 
         for shape in shapes.iter() {
-            let zero = Position::from(vec![0; shape.as_boxed_slice().len()].as_slice());
+            let zero = Position::from(vec![0; shape.len()].as_slice());
             let mut curr = zero.clone();
 
             for off in 1..shape.len() {

@@ -41,7 +41,7 @@ pub enum EngineError {
     #[error("The dimension {0} does not match expected {1}")]
     DimensionMismatch(usize, usize),
     #[error("Got {0} dimensions but expected {1}")]
-    IncorrectDimensions(usize, usize),
+    DimensionsMismatch(usize, usize),
     #[error("Position operation failed: {0}")]
     Tensor(#[from] PositionError),
     #[error("The operation is not supported on this data type")]

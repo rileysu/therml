@@ -1,6 +1,6 @@
 use crate::helper::Shape;
 
-use super::Position;
+use super::{Position, VarArrayCompatible};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Interval {
@@ -98,7 +98,7 @@ impl Slice {
     }
 
     pub fn inferred_shape(&self, shape: &Shape) -> Shape {
-        Shape::new(self.as_boxed_slice().iter().zip(shape.as_boxed_slice().iter()).map(|(interval, dim)| interval.len(*dim)).collect())
+        Shape::new(self.as_boxed_slice().iter().zip(shape.iter()).map(|(interval, dim)| interval.len(dim)).collect())
     }
 
     pub fn len(&self, shape: &Shape) -> usize {
@@ -111,7 +111,7 @@ impl Slice {
 
     //This is called last to differentiate between finish which wouldn't be a valid position
     pub fn last(&self, shape: &Shape) -> Position {
-        Position::new(self.as_boxed_slice().iter().zip(shape.as_boxed_slice().iter()).map(|(interval, dim)| interval.finish_index(*dim).saturating_sub(1)).collect())
+        Position::new(self.as_boxed_slice().iter().zip(shape.iter()).map(|(interval, dim)| interval.finish_index(dim).saturating_sub(1)).collect())
     }
 }
 

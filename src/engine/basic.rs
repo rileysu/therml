@@ -2,7 +2,7 @@ use std::ops::IndexMut;
 
 use itertools::Itertools;
 
-use crate::{engine::{Engine, EngineError, EngineTensorFactory, EngineTensor, util::{err_if_incorrect_dimensions, err_if_dimension_mismatch}}, helper::{Position, Interval, Slice, Shape, Stride}};
+use crate::{engine::{Engine, EngineError, EngineTensorFactory, EngineTensor, util::{err_if_incorrect_dimensions, err_if_dimension_mismatch}}, helper::{Position, Interval, Slice, Shape, Stride, VarArrayCompatible}};
 
 pub struct Basic {}
 
@@ -14,16 +14,16 @@ macro_rules! conv_fn {
         
             err_if_incorrect_dimensions(a.shape(), 4)?;
             err_if_incorrect_dimensions(kernel.shape(), 4)?;
-            err_if_dimension_mismatch(a.shape().dim(1), kernel.shape().dim(1))?;
+            err_if_dimension_mismatch(a.shape().get(1).unwrap(), kernel.shape().get(1).unwrap())?;
         
-            let y = a.shape().dim(a.shape().dims() - 2);
-            let x = a.shape().dim(a.shape().dims() - 1);
-            let k_y = kernel.shape().dim(kernel.shape().dims() - 2) + 2 * (stride - 1);
-            let k_x = kernel.shape().dim(kernel.shape().dims() - 1) + 2 * (stride - 1);
+            let y = a.shape().get(a.shape().len() - 2).unwrap();
+            let x = a.shape().get(a.shape().len() - 1).unwrap();
+            let k_y = kernel.shape().get(kernel.shape().len() - 2).unwrap() + 2 * (stride - 1);
+            let k_x = kernel.shape().get(kernel.shape().len() - 1).unwrap() + 2 * (stride - 1);
         
-            let batches = a.shape().dim(0);
-            let out_channels = kernel.shape().dim(0);
-            let in_channels = kernel.shape().dim(1);
+            let batches = a.shape().get(0).unwrap();
+            let out_channels = kernel.shape().get(0).unwrap();
+            let in_channels = kernel.shape().get(1).unwrap();
         
             //(batches, out_channels, in_channels, y, x)
             let a_broadcast = a.broadcast_splice(1, &[out_channels]);
@@ -36,7 +36,7 @@ macro_rules! conv_fn {
             let y_out = y - half_k_y * 2;
             let x_out = x - half_k_x * 2;
             let out_shape = Shape::from([batches, out_channels, y_out, x_out].as_slice());
-            let out_stride = Stride::from(&out_shape);
+            let out_stride = Stride::default_from_shape(&out_shape);
         
             let mut reordered_sums: Box<[$unit]> = vec![<$unit>::default(); batches * out_channels * y_out * x_out].into_boxed_slice();
         

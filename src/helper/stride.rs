@@ -1,51 +1,45 @@
 use std::ops::Index;
 
-use crate::helper::{Shape, Position};
+use crate::helper::Shape;
+
+use super::{VarArray, VarArrayCompatible, Unit};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub struct Stride(Box<[usize]>);
+pub struct Stride(VarArray);
 
 impl Stride {
-    pub fn new(data: Box<[usize]>) -> Self {
-        Self(data)
-    }
-
-    pub fn as_boxed_slice(&self) -> &Box<[usize]> {
-        &self.0
-    }
-
-    pub fn get_index(&self, pos: &Position) -> usize {
-        self.as_boxed_slice().iter().zip(pos.as_boxed_slice().iter()).map(|(s, p)| s * p).sum()
-    }
-}
-
-impl From<&[usize]> for Stride {
-    fn from(value: &[usize]) -> Self {
-        Self(Box::from(value))
-    }
-}
-
-impl From<&Shape> for Stride {
-    fn from(value: &Shape) -> Self {
-        let mut stride: Vec<usize> = Vec::with_capacity(value.as_boxed_slice().len());
+    pub fn default_from_shape(shape: &Shape) -> Self {
+        let mut stride: Vec<usize> = Vec::with_capacity(shape.len());
 
         let mut next = 1usize;
-        for dim in value.as_boxed_slice().iter().rev() {
+        for dim in shape.iter().collect::<Vec<Unit>>().iter().rev() {
             stride.push(next);
             next *= dim;
         }
 
         stride.reverse();
 
-        Stride(stride.into_boxed_slice())
+        Stride(stride.as_slice().into())
     }
 }
 
-impl Index<usize> for Stride {
-    type Output = usize;
+impl VarArrayCompatible for Stride {
+    fn new(varr: VarArray) -> Self {
+        Self(varr)
+    }
 
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.0[index]
+    fn vararray(&self) -> &VarArray {
+        &self.0
+    }
+
+    fn vararray_mut(&mut self) -> &mut VarArray {
+        &mut self.0
+    }
+}
+
+impl From<&[usize]> for Stride {
+    fn from(value: &[usize]) -> Self {
+        Self(VarArray::from(value))
     }
 }
 
@@ -61,7 +55,7 @@ mod test {
         ];
 
         for (shape, stride) in examples {
-            assert_eq!(Stride::from(&shape), stride);
+            assert_eq!(Stride::default_from_shape(&shape), stride);
         }
     }
 }
