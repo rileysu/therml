@@ -2,7 +2,7 @@ pub mod extension;
 pub mod iter;
 pub mod allowed_unit;
 pub mod factory;
-//pub mod padded;
+pub mod padded;
 
 use std::sync::Arc;
 
@@ -12,14 +12,13 @@ use self::factory::EngineTensorFactory;
 use self::{iter::EngineTensorUnitIterator, allowed_unit::{AllowedUnit, AllowedArray, AllowedQuant}};
 use std::fmt::Debug;
 
-
-
+//Unless otherwise specified every function should make as shallow of a copy as possible
 pub trait EngineTensor: Debug {
     type Unit: AllowedUnit;
 
     fn shape(&self) -> &Shape;
     fn get(&self, pos: &Position) -> Self::Unit;
-    fn iter_unit(&self) -> EngineTensorUnitIterator<'_, Self::Unit>;
+    fn iter_units(&self) -> EngineTensorUnitIterator<'_, Self::Unit>;
 
     fn clone(&self) -> Box<dyn EngineTensor<Unit = Self::Unit>>;
     fn slice(&self, slice: &Slice) -> Box<dyn EngineTensor<Unit = Self::Unit>>;
@@ -31,7 +30,7 @@ pub trait EngineTensor: Debug {
 
 impl<T: AllowedUnit> PartialEq for dyn EngineTensor<Unit = T> + '_ {
     fn eq(&self, other: &Self) -> bool {
-        self.shape() == other.shape() && self.iter_unit().zip(other.iter_unit()).all(|(a, b)| a == b)
+        self.shape() == other.shape() && self.iter_units().zip(other.iter_units()).all(|(a, b)| a == b)
     }
 }
 
@@ -82,7 +81,7 @@ impl<T: AllowedArray> EngineTensor for Array<T> {
         *self.data.as_ref().get(index).unwrap()
     }
 
-    fn iter_unit(&self) -> EngineTensorUnitIterator<'_, T> {
+    fn iter_units(&self) -> EngineTensorUnitIterator<'_, T> {
         EngineTensorUnitIterator::new(self)
     }
 
@@ -118,7 +117,7 @@ impl<T: AllowedArray> EngineTensor for Array<T> {
                     offset: self.offset,
                 })
             } else {
-                Array::<T>::from_iter(self.iter_unit(), shape.clone())
+                Array::<T>::from_iter(self.iter_units(), shape.clone())
             }
         } else {
             todo!()
@@ -174,7 +173,7 @@ impl<T: AllowedQuant> EngineTensor for Quant<T> {
         *self.data.as_ref().get(index).unwrap()
     }
 
-    fn iter_unit(&self) -> EngineTensorUnitIterator<'_, T> {
+    fn iter_units(&self) -> EngineTensorUnitIterator<'_, T> {
         EngineTensorUnitIterator::new(self)
     }
 

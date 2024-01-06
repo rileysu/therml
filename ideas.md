@@ -63,15 +63,17 @@ return tensor::from_slice(&out_units): (y, x, batches, out_channels)
 
 ```
 
+## Done
+- Probably remove the distinction between context and comp_graph
+    - Dump graph on calculation
+    - Allow for recalc maybe (as in mutating tensors within the graph)
+
 ## TODO
 
 - Refactor comp_graph to improve errors (ones with no nodekey) and reduce repeated code
 - Need a way to remove graphs / subgraphs once they are finished 
     - Maybe seperate graphs from context and create a new graph per training / inference iteration
     - Use phantom to make tensors references to graph so it can't outlive graph
-- Probably remove the distinction between context and comp_graph
-    - Dump graph on calculation
-    - Allow for recalc maybe (as in mutating tensors within the graph)
 - Model how the graph interface should look externally as ergonomics is an issue rn
 - Make a variable length array to use in position, shape, slice
     - Each can use the underlying type to handle basic operations

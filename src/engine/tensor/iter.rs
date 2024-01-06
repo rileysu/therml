@@ -67,7 +67,7 @@ impl<T: AllowedUnit> Iterator for EngineTensorUnitIterator<'_, T> {
             let out = Some(self.tensor.get(&self.curr));
 
             if self.curr != self.finish {
-                self.curr.incdec_mut(self.tensor.shape(), 1);
+                self.curr.incdec_mut(self.tensor.shape(), 1).unwrap();
             } else {
                 self.ended = true;
             }

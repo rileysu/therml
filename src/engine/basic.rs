@@ -44,7 +44,7 @@ macro_rules! conv_fn {
                 for curr_x in 0..x_out {
                     let a_sliced = a_broadcast.slice(&Slice::from([Interval::all(), Interval::all(), Interval::all(), Interval::between_with_step(curr_y, curr_y + k_y, stride), Interval::between_with_step(curr_x, curr_x + k_x, stride)].as_slice()));
         
-                    let chunked_products = a_sliced.iter_unit().zip(kernel_broadcast.iter_unit()).map(|(a_elem, k_elem)| a_elem * k_elem).chunks(in_channels * k_y * k_x);
+                    let chunked_products = a_sliced.iter_units().zip(kernel_broadcast.iter_units()).map(|(a_elem, k_elem)| a_elem * k_elem).chunks(in_channels * k_y * k_x);
                     let curr_sums = chunked_products.into_iter().map(|i| -> $unit { i.sum() });
         
                     for (i, sum) in curr_sums.enumerate() {
@@ -71,42 +71,42 @@ macro_rules! basic_impl {
             //Pointwise Single
             fn abs<E: EngineTensorFactory<Unit = $unit>>(a: &dyn EngineTensor<Unit = $unit>) -> Result<Box<dyn EngineTensor<Unit = $unit>>, crate::engine::EngineError> {
         
-                Ok(E::from_iter(a.iter_unit().map(|x| x.abs()), a.shape().clone()))
+                Ok(E::from_iter(a.iter_units().map(|x| x.abs()), a.shape().clone()))
             }
         
             fn neg<E: EngineTensorFactory<Unit = $unit>>(a: &dyn EngineTensor<Unit = $unit>) -> Result<Box<dyn EngineTensor<Unit = $unit>>, crate::engine::EngineError> {
-                Ok(E::from_iter(a.iter_unit().map(|x| -x), a.shape().clone()))
+                Ok(E::from_iter(a.iter_units().map(|x| -x), a.shape().clone()))
             }
 
             //Scalar
             fn add_scalar<E: EngineTensorFactory<Unit = $unit>>(s: $unit, a: &dyn EngineTensor<Unit = $unit>) -> Result<Box<dyn EngineTensor<Unit = $unit>>, EngineError> {
-                Ok(E::from_iter(a.iter_unit().map(|x| x + s), a.shape().clone()))
+                Ok(E::from_iter(a.iter_units().map(|x| x + s), a.shape().clone()))
             }
 
             fn sub_scalar_lh<E: EngineTensorFactory<Unit = $unit>>(s: $unit, a: &dyn EngineTensor<Unit = $unit>) -> Result<Box<dyn EngineTensor<Unit = $unit>>, EngineError> {
-                Ok(E::from_iter(a.iter_unit().map(|x| s - x), a.shape().clone()))
+                Ok(E::from_iter(a.iter_units().map(|x| s - x), a.shape().clone()))
             }
 
             fn sub_scalar_rh<E: EngineTensorFactory<Unit = $unit>>(a: &dyn EngineTensor<Unit = $unit>, s: $unit) -> Result<Box<dyn EngineTensor<Unit = $unit>>, EngineError> {
-                Ok(E::from_iter(a.iter_unit().map(|x| x - s), a.shape().clone()))
+                Ok(E::from_iter(a.iter_units().map(|x| x - s), a.shape().clone()))
             }
 
             fn mul_scalar<E: EngineTensorFactory<Unit = $unit>>(s: $unit, a: &dyn EngineTensor<Unit = $unit>) -> Result<Box<dyn EngineTensor<Unit = $unit>>, EngineError> {
-                Ok(E::from_iter(a.iter_unit().map(|x| x * s), a.shape().clone()))
+                Ok(E::from_iter(a.iter_units().map(|x| x * s), a.shape().clone()))
             }
 
             fn div_scalar_lh<E: EngineTensorFactory<Unit = $unit>>(s: $unit, a: &dyn EngineTensor<Unit = $unit>) -> Result<Box<dyn EngineTensor<Unit = $unit>>, EngineError> {
-                Ok(E::from_iter(a.iter_unit().map(|x| s / x), a.shape().clone()))
+                Ok(E::from_iter(a.iter_units().map(|x| s / x), a.shape().clone()))
             }
 
             fn div_scalar_rh<E: EngineTensorFactory<Unit = $unit>>(a: &dyn EngineTensor<Unit = $unit>, s: $unit) -> Result<Box<dyn EngineTensor<Unit = $unit>>, EngineError> {
-                Ok(E::from_iter(a.iter_unit().map(|x| x / s), a.shape().clone()))
+                Ok(E::from_iter(a.iter_units().map(|x| x / s), a.shape().clone()))
             }
         
             //Pointwise Double
             fn add<E: EngineTensorFactory<Unit = $unit>>(a: &dyn EngineTensor<Unit = $unit>, b: &dyn EngineTensor<Unit = $unit>) -> Result<Box<dyn EngineTensor<Unit = $unit>>, crate::engine::EngineError> {
                 if a.shape() == b.shape() {
-                    Ok(E::from_iter(&mut a.iter_unit().zip(b.iter_unit()).map(|(x, y)| x + y), a.shape().clone()))
+                    Ok(E::from_iter(&mut a.iter_units().zip(b.iter_units()).map(|(x, y)| x + y), a.shape().clone()))
                 } else {
                     Err(EngineError::ShapeMismatch(a.shape().clone(), b.shape().clone()))
                 }
@@ -114,7 +114,7 @@ macro_rules! basic_impl {
 
             fn sub<E: EngineTensorFactory<Unit = $unit>>(a: &dyn EngineTensor<Unit = $unit>, b: &dyn EngineTensor<Unit = $unit>) -> Result<Box<dyn EngineTensor<Unit = $unit>>, crate::engine::EngineError> {
                 if a.shape() == b.shape() {
-                    Ok(E::from_iter(&mut a.iter_unit().zip(b.iter_unit()).map(|(x, y)| x - y), a.shape().clone()))
+                    Ok(E::from_iter(&mut a.iter_units().zip(b.iter_units()).map(|(x, y)| x - y), a.shape().clone()))
                 } else {
                     Err(EngineError::ShapeMismatch(a.shape().clone(), b.shape().clone()))
                 }
@@ -122,7 +122,7 @@ macro_rules! basic_impl {
         
             fn mul<E: EngineTensorFactory<Unit = $unit>>(a: &dyn EngineTensor<Unit = $unit>, b: &dyn EngineTensor<Unit = $unit>) -> Result<Box<dyn EngineTensor<Unit = $unit>>, crate::engine::EngineError> {
                 if a.shape() == b.shape() {
-                    Ok(E::from_iter(&mut a.iter_unit().zip(b.iter_unit()).map(|(x, y)| x * y), a.shape().clone()))
+                    Ok(E::from_iter(&mut a.iter_units().zip(b.iter_units()).map(|(x, y)| x * y), a.shape().clone()))
                 } else {
                     Err(EngineError::ShapeMismatch(a.shape().clone(), b.shape().clone()))
                 }
@@ -130,7 +130,7 @@ macro_rules! basic_impl {
         
             fn div<E: EngineTensorFactory<Unit = $unit>>(a: &dyn EngineTensor<Unit = $unit>, b: &dyn EngineTensor<Unit = $unit>) -> Result<Box<dyn EngineTensor<Unit = $unit>>, crate::engine::EngineError> {
                 if a.shape() == b.shape() {
-                    Ok(E::from_iter(&mut a.iter_unit().zip(b.iter_unit()).map(|(x, y)| x / y), a.shape().clone()))
+                    Ok(E::from_iter(&mut a.iter_units().zip(b.iter_units()).map(|(x, y)| x / y), a.shape().clone()))
                 } else {
                     Err(EngineError::ShapeMismatch(a.shape().clone(), b.shape().clone()))
                 }
@@ -148,7 +148,7 @@ macro_rules! basic_unsigned_impl {
             //Pointwise Single
             fn abs<E: EngineTensorFactory<Unit = $unit>>(a: &dyn EngineTensor<Unit = $unit>) -> Result<Box<dyn EngineTensor<Unit = $unit>>, crate::engine::EngineError> {
         
-                Ok(E::from_iter(&mut a.iter_unit().map(|x| x), a.shape().clone()))
+                Ok(E::from_iter(&mut a.iter_units().map(|x| x), a.shape().clone()))
             }
         
             fn neg<E: EngineTensorFactory<Unit = $unit>>(_a: &dyn EngineTensor<Unit = $unit>) -> Result<Box<dyn EngineTensor<Unit = $unit>>, crate::engine::EngineError> {
@@ -157,33 +157,33 @@ macro_rules! basic_unsigned_impl {
 
             //Scalar
             fn add_scalar<E: EngineTensorFactory<Unit = $unit>>(s: $unit, a: &dyn EngineTensor<Unit = $unit>) -> Result<Box<dyn EngineTensor<Unit = $unit>>, EngineError> {
-                Ok(E::from_iter(a.iter_unit().map(|x| x + s), a.shape().clone()))
+                Ok(E::from_iter(a.iter_units().map(|x| x + s), a.shape().clone()))
             }
 
             fn sub_scalar_lh<E: EngineTensorFactory<Unit = $unit>>(s: $unit, a: &dyn EngineTensor<Unit = $unit>) -> Result<Box<dyn EngineTensor<Unit = $unit>>, EngineError> {
-                Ok(E::from_iter(a.iter_unit().map(|x| s - x), a.shape().clone()))
+                Ok(E::from_iter(a.iter_units().map(|x| s - x), a.shape().clone()))
             }
 
             fn sub_scalar_rh<E: EngineTensorFactory<Unit = $unit>>(a: &dyn EngineTensor<Unit = $unit>, s: $unit) -> Result<Box<dyn EngineTensor<Unit = $unit>>, EngineError> {
-                Ok(E::from_iter(a.iter_unit().map(|x| x - s), a.shape().clone()))
+                Ok(E::from_iter(a.iter_units().map(|x| x - s), a.shape().clone()))
             }
 
             fn mul_scalar<E: EngineTensorFactory<Unit = $unit>>(s: $unit, a: &dyn EngineTensor<Unit = $unit>) -> Result<Box<dyn EngineTensor<Unit = $unit>>, EngineError> {
-                Ok(E::from_iter(a.iter_unit().map(|x| x * s), a.shape().clone()))
+                Ok(E::from_iter(a.iter_units().map(|x| x * s), a.shape().clone()))
             }
 
             fn div_scalar_lh<E: EngineTensorFactory<Unit = $unit>>(s: $unit, a: &dyn EngineTensor<Unit = $unit>) -> Result<Box<dyn EngineTensor<Unit = $unit>>, EngineError> {
-                Ok(E::from_iter(a.iter_unit().map(|x| s / x), a.shape().clone()))
+                Ok(E::from_iter(a.iter_units().map(|x| s / x), a.shape().clone()))
             }
 
             fn div_scalar_rh<E: EngineTensorFactory<Unit = $unit>>(a: &dyn EngineTensor<Unit = $unit>, s: $unit) -> Result<Box<dyn EngineTensor<Unit = $unit>>, EngineError> {
-                Ok(E::from_iter(a.iter_unit().map(|x| x / s), a.shape().clone()))
+                Ok(E::from_iter(a.iter_units().map(|x| x / s), a.shape().clone()))
             }
         
             //Pointwise Double
             fn add<E: EngineTensorFactory<Unit = $unit>>(a: &dyn EngineTensor<Unit = $unit>, b: &dyn EngineTensor<Unit = $unit>) -> Result<Box<dyn EngineTensor<Unit = $unit>>, crate::engine::EngineError> {
                 if a.shape() == b.shape() {
-                    Ok(E::from_iter(&mut a.iter_unit().zip(b.iter_unit()).map(|(x, y)| x + y), a.shape().clone()))
+                    Ok(E::from_iter(&mut a.iter_units().zip(b.iter_units()).map(|(x, y)| x + y), a.shape().clone()))
                 } else {
                     Err(EngineError::ShapeMismatch(a.shape().clone(), b.shape().clone()))
                 }
@@ -191,7 +191,7 @@ macro_rules! basic_unsigned_impl {
         
             fn sub<E: EngineTensorFactory<Unit = $unit>>(a: &dyn EngineTensor<Unit = $unit>, b: &dyn EngineTensor<Unit = $unit>) -> Result<Box<dyn EngineTensor<Unit = $unit>>, crate::engine::EngineError> {
                 if a.shape() == b.shape() {
-                    Ok(E::from_iter(&mut a.iter_unit().zip(b.iter_unit()).map(|(x, y)| x - y), a.shape().clone()))
+                    Ok(E::from_iter(&mut a.iter_units().zip(b.iter_units()).map(|(x, y)| x - y), a.shape().clone()))
                 } else {
                     Err(EngineError::ShapeMismatch(a.shape().clone(), b.shape().clone()))
                 }
@@ -199,7 +199,7 @@ macro_rules! basic_unsigned_impl {
         
             fn mul<E: EngineTensorFactory<Unit = $unit>>(a: &dyn EngineTensor<Unit = $unit>, b: &dyn EngineTensor<Unit = $unit>) -> Result<Box<dyn EngineTensor<Unit = $unit>>, crate::engine::EngineError> {
                 if a.shape() == b.shape() {
-                    Ok(E::from_iter(&mut a.iter_unit().zip(b.iter_unit()).map(|(x, y)| x * y), a.shape().clone()))
+                    Ok(E::from_iter(&mut a.iter_units().zip(b.iter_units()).map(|(x, y)| x * y), a.shape().clone()))
                 } else {
                     Err(EngineError::ShapeMismatch(a.shape().clone(), b.shape().clone()))
                 }
@@ -207,7 +207,7 @@ macro_rules! basic_unsigned_impl {
         
             fn div<E: EngineTensorFactory<Unit = $unit>>(a: &dyn EngineTensor<Unit = $unit>, b: &dyn EngineTensor<Unit = $unit>) -> Result<Box<dyn EngineTensor<Unit = $unit>>, crate::engine::EngineError> {
                 if a.shape() == b.shape() {
-                    Ok(E::from_iter(&mut a.iter_unit().zip(b.iter_unit()).map(|(x, y)| x / y), a.shape().clone()))
+                    Ok(E::from_iter(&mut a.iter_units().zip(b.iter_units()).map(|(x, y)| x / y), a.shape().clone()))
                 } else {
                     Err(EngineError::ShapeMismatch(a.shape().clone(), b.shape().clone()))
                 }

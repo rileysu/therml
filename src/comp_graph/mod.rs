@@ -470,7 +470,7 @@ mod test {
 
         let tensor = new_node_keys.last().unwrap();
 
-        let expected = Array::from_iter( &mut expected_original.iter_unit().map(|x| x * 2.0f32.pow(power)), expected_original.shape().clone());
+        let expected = Array::from_iter( &mut expected_original.iter_units().map(|x| x * 2.0f32.pow(power)), expected_original.shape().clone());
 
         graph.non_populating_eval(&tensor).unwrap();
 

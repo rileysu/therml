@@ -56,6 +56,9 @@ impl Display for Shape {
 }
 
 macro_rules! shape {
+    () => {
+        Shape::from([].as_slice())
+    };
     ($($x:expr),+) => {
         Shape::from([$($x),+].as_slice())
     };

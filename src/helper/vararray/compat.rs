@@ -23,19 +23,19 @@ pub trait VarArrayCompatible: Sized {
     fn as_mut_slice(&mut self) -> &mut [usize] {
         self.vararray_mut().as_mut_slice()
     }
-    fn add(&self, rhs: impl VarArrayCompatible) -> Result<Self, VarArrayError> {
+    fn add(&self, rhs: &impl VarArrayCompatible) -> Result<Self, VarArrayError> {
         Ok(Self::new(self.vararray().add(rhs.vararray())?))
     }
-    fn sub(&self, rhs: impl VarArrayCompatible) -> Result<Self, VarArrayError> {
+    fn sub(&self, rhs: &impl VarArrayCompatible) -> Result<Self, VarArrayError> {
         Ok(Self::new(self.vararray().sub(rhs.vararray())?))
     }
-    fn div(&self, rhs: impl VarArrayCompatible) -> Result<Self, VarArrayError> {
+    fn div(&self, rhs: &impl VarArrayCompatible) -> Result<Self, VarArrayError> {
         Ok(Self::new(self.vararray().div(rhs.vararray())?))
     }
-    fn mul(&self, rhs: impl VarArrayCompatible) -> Result<Self, VarArrayError> {
+    fn mul(&self, rhs: &impl VarArrayCompatible) -> Result<Self, VarArrayError> {
         Ok(Self::new(self.vararray().mul(rhs.vararray())?))
     }
-    fn rem(&self, rhs: impl VarArrayCompatible) -> Result<Self, VarArrayError> {
+    fn rem(&self, rhs: &impl VarArrayCompatible) -> Result<Self, VarArrayError> {
         Ok(Self::new(self.vararray().rem(rhs.vararray())?))
     }
 }

@@ -1,7 +1,6 @@
-mod iter;
+pub mod iter;
 mod compat;
 
-pub use iter::*;
 pub use compat::*;
 
 use std::ops::{Add, Sub, Div, Mul, Rem};
@@ -311,6 +310,20 @@ impl FromIterator<Unit> for VarArray {
             8 => Self::Eight([iter.next().unwrap(), iter.next().unwrap(), iter.next().unwrap(), iter.next().unwrap(), iter.next().unwrap(), iter.next().unwrap(), iter.next().unwrap(), iter.next().unwrap()]),
             _ => Self::Etc(iter.collect()),
         }
+    }
+}
+
+impl VarArrayCompatible for VarArray {
+    fn new(varr: VarArray) -> Self {
+        varr
+    }
+
+    fn vararray(&self) -> &VarArray {
+        self
+    }
+
+    fn vararray_mut(&mut self) -> &mut VarArray {
+        self
     }
 }
 
