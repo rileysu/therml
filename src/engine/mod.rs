@@ -1,6 +1,7 @@
 pub mod tensor;
 pub mod basic;
 
+mod shared;
 mod util;
 
 use crate::helper::{Shape, PositionError};
@@ -31,7 +32,7 @@ pub trait Engine<T: AllowedUnit> {
     fn div<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>, b: &dyn EngineTensor<Unit = T>) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
 
     //Conv
-    fn conv2d<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>, kernel: &dyn EngineTensor<Unit = T>, stride: usize) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
+    fn conv2d<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>, kernel: &dyn EngineTensor<Unit = T>, padding: usize, stride: usize) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
 }
 
 #[derive(Error, Debug)]

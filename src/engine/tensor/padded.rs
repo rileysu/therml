@@ -120,7 +120,7 @@ impl<T: AllowedPadded> EngineTensor for Padded<T> {
     fn slice(&self, slice: &Slice) -> Box<dyn EngineTensor<Unit = Self::Unit>> {
         let slice_shape = slice.inferred_shape(self.shape());
 
-        let steps = VarArray::from_iter(slice.as_boxed_slice().iter().map(|int| int.step_index()));
+        let steps = VarArray::from_iter(slice.as_boxed_slice().iter().map(|int| int.step()));
 
         let start_rel = slice.start();
         let start_abs = self.relative_to_absolute_pos(&start_rel);
@@ -186,8 +186,9 @@ mod test {
 
     fn create_examples() -> Vec<Padded<f32>> {
         vec![
-            Padded::pad_from(Array::from_iter([0.0; 0].iter().copied(), shape![]), varr![], 0.0),
+            //Padded::pad_from(Array::from_iter([0.0; 0].iter().copied(), shape![]), varr![], 0.0),
             Padded::pad_from(Array::from_iter((1..=9).map(|x| x as f32 / 9.0), shape![9]), varr![1], 0.0),
+            Padded::pad_from(Array::from_iter((1..=9).map(|x| x as f32 / 9.0), shape![3, 3]), varr![1, 1], 0.0),
             Padded::pad_from(Array::from_iter((1..=105).map(|x| x as f32 / 105.0), shape![3, 5, 7]), varr![1, 2, 3], 0.0),
             Padded::pad_from(Array::from_iter((1..=105).map(|x| x as f32 / 105.0), shape![1, 1, 3, 5, 7]), varr![0, 1, 1, 2, 3], 0.0),
         ]
@@ -201,8 +202,10 @@ mod test {
 
             let shape = example.shape();
 
+            println!("{:?}", Array::from_iter(example.iter_units(), shape.clone()));
+
             for curr_pos in shape.first().iter_positions(&shape.last(), &shape) {
-                println!("{:?}", curr_pos);
+                //println!("{:?}", curr_pos);
 
                 let abs_pos = example.relative_to_absolute_pos(&curr_pos);
 

@@ -53,6 +53,14 @@ impl Interval {
         }
     }
 
+    pub fn only(start: usize) -> Self {
+        Self {
+            start: Some(start),
+            finish: Some(start + 1),
+            step: None,
+        }
+    }
+
     pub fn all() -> Self {
         Self {
             start: None,
@@ -69,14 +77,14 @@ impl Interval {
         self.finish.unwrap_or(dim)
     }
 
-    pub fn step_index(&self) -> usize {
+    pub fn step(&self) -> usize {
         self.step.unwrap_or(1)
     }
 
     pub fn len(&self, dim: usize) -> usize {
         let start_index = self.start_index();
         let finish_index = self.finish_index(dim);
-        let step_index = self.step_index();
+        let step_index = self.step();
 
         (finish_index - start_index) / step_index
     }

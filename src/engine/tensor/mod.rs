@@ -43,6 +43,16 @@ pub struct Array<T: AllowedArray> {
 }
 
 impl<T: AllowedArray> Array<T> {
+
+    pub fn from_data(stride: Stride, shape: Shape, data: Arc<[T]>, offset: usize) -> Self {
+        Self {
+            stride,
+            shape,
+            data,
+            offset,
+        }
+    }
+
     //Am I dumb?
     //This is wrong!!!
     //TODO
@@ -108,7 +118,7 @@ impl<T: AllowedArray> EngineTensor for Array<T> {
     //Attempts to efficiently reuse memory if tensor is contiguous
     //If this is not an option it will copy from an iterator
     fn reshape(&self, shape: &Shape) -> Box<dyn EngineTensor<Unit = T>> {
-        if shape.len() == self.shape().len() {
+        if shape.elements() == self.shape().elements() {
             if self.is_contiguous() {
                 Box::new(Array::<T> {
                     stride: Stride::default_from_shape(shape),
