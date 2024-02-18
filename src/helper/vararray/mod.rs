@@ -7,6 +7,8 @@ use std::ops::{Add, Sub, Div, Mul, Rem};
 
 use thiserror::Error;
 
+use self::iter::Iter;
+
 pub type Unit = usize;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
@@ -358,18 +360,17 @@ macro_rules! varr {
     };
 }
 pub(crate) use varr;
-
-use self::iter::Iter;
-
 #[cfg(test)]
 mod test {
+    use std::iter::repeat;
+
     use super::*;
 
     fn gen_varrs_with(limit: usize, inst_sample: &[Unit]) -> Vec<VarArray> {
         let mut out = Vec::<VarArray>::new();
 
         for curr_limit in 0..limit {
-            out.push(VarArray::from(&inst_sample[0..=curr_limit]));
+            out.push(VarArray::from_iter(inst_sample[0..=curr_limit].iter().copied()));
         }
 
         out
@@ -379,36 +380,47 @@ mod test {
     pub fn create_and_length() {
         let v0 = varr![];
         assert_eq!(v0.len(), 0);
+        assert_eq!(v0, VarArray::from_iter(repeat(0).take(0)));
 
         let v1 = varr![0];
         assert_eq!(v1.len(), 1);
+        assert_eq!(v1, VarArray::from_iter(repeat(0).take(1)));
 
         let v2 = varr![0, 0];
         assert_eq!(v2.len(), 2);
+        assert_eq!(v2, VarArray::from_iter(repeat(0).take(2)));
 
         let v3 = varr![0, 0, 0];
         assert_eq!(v3.len(), 3);
+        assert_eq!(v3, VarArray::from_iter(repeat(0).take(3)));
 
         let v4 = varr![0, 0, 0, 0];
         assert_eq!(v4.len(), 4);
+        assert_eq!(v4, VarArray::from_iter(repeat(0).take(4)));
 
         let v5 = varr![0, 0, 0, 0, 0];
         assert_eq!(v5.len(), 5);
+        assert_eq!(v5, VarArray::from_iter(repeat(0).take(5)));
 
         let v6 = varr![0, 0, 0, 0, 0, 0];
         assert_eq!(v6.len(), 6);
+        assert_eq!(v6, VarArray::from_iter(repeat(0).take(6)));
 
         let v7 = varr![0, 0, 0, 0, 0, 0, 0];
         assert_eq!(v7.len(), 7);
+        assert_eq!(v7, VarArray::from_iter(repeat(0).take(7)));
 
         let v8 = varr![0, 0, 0, 0, 0, 0, 0, 0];
         assert_eq!(v8.len(), 8);
+        assert_eq!(v8, VarArray::from_iter(repeat(0).take(8)));
 
         let v9 = varr![0, 0, 0, 0, 0, 0, 0, 0, 0];
         assert_eq!(v9.len(), 9);
+        assert_eq!(v9, VarArray::from_iter(repeat(0).take(9)));
 
         let v10 = VarArray::from([0; 128].as_slice());
         assert_eq!(v10.len(), 128);
+        assert_eq!(v10, VarArray::from_iter(repeat(0).take(128)));
     }
 
     #[test]
@@ -475,6 +487,27 @@ mod test {
 
             assert_eq!(zipped.len(), curr_len);
             assert!(zipped.iter().all(|(t, o)| t == o));
+        }
+    }
+    
+    #[test]
+    pub fn slice() {
+        let limit = 32usize;
+        let sample = (0..limit).collect::<Box<[Unit]>>();
+
+        let varrs = gen_varrs_with(limit, &sample);
+
+        for mut varr in varrs {
+            let curr_len = varr.len();
+
+            let zipped = varr.as_slice().iter().copied().zip(sample.iter().copied()).collect::<Box<[(Unit, Unit)]>>();
+            let zipped_mut = varr.as_mut_slice().iter().copied().zip(sample.iter().copied()).collect::<Box<[(Unit, Unit)]>>();
+
+            assert_eq!(zipped.len(), curr_len);
+            assert!(zipped.iter().all(|(t, o)| t == o));
+            
+            assert_eq!(zipped_mut.len(), curr_len);
+            assert!(zipped_mut.iter().all(|(t, o)| t == o));
         }
     }
 
