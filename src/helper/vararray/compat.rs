@@ -8,10 +8,10 @@ pub trait VarArrayCompatible: Sized {
     fn len(&self) -> usize {
         self.vararray().len()
     }
-    fn get(&self, index: usize) -> Option<Unit> {
+    fn get(&self, index: usize) -> Result<Unit, VarArrayError> {
         self.vararray().get(index)
     }
-    fn get_mut(&mut self, index: usize) -> Option<&mut Unit> {
+    fn get_mut(&mut self, index: usize) -> Result<&mut Unit, VarArrayError> {
         self.vararray_mut().get_mut(index)
     }
     fn iter(&self) -> Iter {

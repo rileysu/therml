@@ -29,6 +29,10 @@ impl Position {
             curr += self.get(i).unwrap() as i64;
             *self.get_mut(i).unwrap() = curr.rem_euclid(signed_bound) as usize;
             curr = curr.div_euclid(signed_bound);
+
+            if curr == 0 {
+                return Ok(());
+            }
         }
 
         if curr != 0 {

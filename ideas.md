@@ -77,3 +77,4 @@ return tensor::from_slice(&out_units): (y, x, batches, out_channels)
 - Model how the graph interface should look externally as ergonomics is an issue rn
 - Make a variable length array to use in position, shape, slice
     - Each can use the underlying type to handle basic operations
+- Optimize incrementing position

@@ -39,137 +39,148 @@ impl VarArray {
         }
     }
 
-    pub fn get(&self, index: usize) -> Option<Unit> {
+    pub fn get(&self, index: usize) -> Result<Unit, VarArrayError> {
         match self {
-            VarArray::Zero(_) => None,
+            VarArray::Zero(_) => Err(VarArrayError::IndexOutOfRange { index, length: 0 }),
             VarArray::One(arr) => match index {
-                0 => Some(arr[0]),
-                _ => None,
+                0 => Ok(arr[0]),
+                _ => Err(VarArrayError::IndexOutOfRange { index, length: 1 }),
             },
             VarArray::Two(arr) => match index {
-                0 => Some(arr[0]),
-                1 => Some(arr[1]),
-                _ => None,
+                0 => Ok(arr[0]),
+                1 => Ok(arr[1]),
+                _ => Err(VarArrayError::IndexOutOfRange { index, length: 2 }),
+
             },
             VarArray::Three(arr) => match index {
-                0 => Some(arr[0]),
-                1 => Some(arr[1]),
-                2 => Some(arr[2]),
-                _ => None,
+                0 => Ok(arr[0]),
+                1 => Ok(arr[1]),
+                2 => Ok(arr[2]),
+                _ => Err(VarArrayError::IndexOutOfRange { index, length: 3 }),
             },
             VarArray::Four(arr) => match index {
-                0 => Some(arr[0]),
-                1 => Some(arr[1]),
-                2 => Some(arr[2]),
-                3 => Some(arr[3]),
-                _ => None,
+                0 => Ok(arr[0]),
+                1 => Ok(arr[1]),
+                2 => Ok(arr[2]),
+                3 => Ok(arr[3]),
+                _ => Err(VarArrayError::IndexOutOfRange { index, length: 4 }),
             },
             VarArray::Five(arr) => match index {
-                0 => Some(arr[0]),
-                1 => Some(arr[1]),
-                2 => Some(arr[2]),
-                3 => Some(arr[3]),
-                4 => Some(arr[4]),
-                _ => None,
+                0 => Ok(arr[0]),
+                1 => Ok(arr[1]),
+                2 => Ok(arr[2]),
+                3 => Ok(arr[3]),
+                4 => Ok(arr[4]),
+                _ => Err(VarArrayError::IndexOutOfRange { index, length: 5 }),
             },
             VarArray::Six(arr) => match index {
-                0 => Some(arr[0]),
-                1 => Some(arr[1]),
-                2 => Some(arr[2]),
-                3 => Some(arr[3]),
-                4 => Some(arr[4]),
-                5 => Some(arr[5]),
-                _ => None,
+                0 => Ok(arr[0]),
+                1 => Ok(arr[1]),
+                2 => Ok(arr[2]),
+                3 => Ok(arr[3]),
+                4 => Ok(arr[4]),
+                5 => Ok(arr[5]),
+                _ => Err(VarArrayError::IndexOutOfRange { index, length: 6 }),
             },
             VarArray::Seven(arr) => match index {
-                0 => Some(arr[0]),
-                1 => Some(arr[1]),
-                2 => Some(arr[2]),
-                3 => Some(arr[3]),
-                4 => Some(arr[4]),
-                5 => Some(arr[5]),
-                6 => Some(arr[6]),
-                _ => None,
+                0 => Ok(arr[0]),
+                1 => Ok(arr[1]),
+                2 => Ok(arr[2]),
+                3 => Ok(arr[3]),
+                4 => Ok(arr[4]),
+                5 => Ok(arr[5]),
+                6 => Ok(arr[6]),
+                _ => Err(VarArrayError::IndexOutOfRange { index, length: 7 }),
             },
             VarArray::Eight(arr) =>  match index {
-                0 => Some(arr[0]),
-                1 => Some(arr[1]),
-                2 => Some(arr[2]),
-                3 => Some(arr[3]),
-                4 => Some(arr[4]),
-                5 => Some(arr[5]),
-                6 => Some(arr[6]),
-                7 => Some(arr[7]),
-                _ => None,
+                0 => Ok(arr[0]),
+                1 => Ok(arr[1]),
+                2 => Ok(arr[2]),
+                3 => Ok(arr[3]),
+                4 => Ok(arr[4]),
+                5 => Ok(arr[5]),
+                6 => Ok(arr[6]),
+                7 => Ok(arr[7]),
+                _ => Err(VarArrayError::IndexOutOfRange { index, length: 8 }),
             },
-            VarArray::Etc(arr) => arr.get(index).copied(),
+            VarArray::Etc(arr) => arr.get(index).copied().ok_or(VarArrayError::IndexOutOfRange { index, length: arr.len() }),
         }
     }
 
-    pub fn get_mut(&mut self, index: usize) -> Option<&mut Unit> {
+    pub fn get_mut(&mut self, index: usize) -> Result<&mut Unit, VarArrayError> {
         match self {
-            VarArray::Zero(_) => None,
+            VarArray::Zero(_) => Err(VarArrayError::IndexOutOfRange { index, length: 0 }),
             VarArray::One(arr) => match index {
-                0 => Some(&mut arr[0]),
-                _ => None,
+                0 => Ok(&mut arr[0]),
+                _ => Err(VarArrayError::IndexOutOfRange { index, length: 1 }),
             },
             VarArray::Two(arr) => match index {
-                0 => Some(&mut arr[0]),
-                1 => Some(&mut arr[1]),
-                _ => None,
+                0 => Ok(&mut arr[0]),
+                1 => Ok(&mut arr[1]),
+                _ => Err(VarArrayError::IndexOutOfRange { index, length: 2 }),
+
             },
             VarArray::Three(arr) => match index {
-                0 => Some(&mut arr[0]),
-                1 => Some(&mut arr[1]),
-                2 => Some(&mut arr[2]),
-                _ => None,
+                0 => Ok(&mut arr[0]),
+                1 => Ok(&mut arr[1]),
+                2 => Ok(&mut arr[2]),
+                _ => Err(VarArrayError::IndexOutOfRange { index, length: 3 }),
+
             },
             VarArray::Four(arr) => match index {
-                0 => Some(&mut arr[0]),
-                1 => Some(&mut arr[1]),
-                2 => Some(&mut arr[2]),
-                3 => Some(&mut arr[3]),
-                _ => None,
+                0 => Ok(&mut arr[0]),
+                1 => Ok(&mut arr[1]),
+                2 => Ok(&mut arr[2]),
+                3 => Ok(&mut arr[3]),
+                _ => Err(VarArrayError::IndexOutOfRange { index, length: 4 }),
+
             },
             VarArray::Five(arr) => match index {
-                0 => Some(&mut arr[0]),
-                1 => Some(&mut arr[1]),
-                2 => Some(&mut arr[2]),
-                3 => Some(&mut arr[3]),
-                4 => Some(&mut arr[4]),
-                _ => None,
+                0 => Ok(&mut arr[0]),
+                1 => Ok(&mut arr[1]),
+                2 => Ok(&mut arr[2]),
+                3 => Ok(&mut arr[3]),
+                4 => Ok(&mut arr[4]),
+                _ => Err(VarArrayError::IndexOutOfRange { index, length: 5 }),
+
             },
             VarArray::Six(arr) => match index {
-                0 => Some(&mut arr[0]),
-                1 => Some(&mut arr[1]),
-                2 => Some(&mut arr[2]),
-                3 => Some(&mut arr[3]),
-                4 => Some(&mut arr[4]),
-                5 => Some(&mut arr[5]),
-                _ => None,
+                0 => Ok(&mut arr[0]),
+                1 => Ok(&mut arr[1]),
+                2 => Ok(&mut arr[2]),
+                3 => Ok(&mut arr[3]),
+                4 => Ok(&mut arr[4]),
+                5 => Ok(&mut arr[5]),
+                _ => Err(VarArrayError::IndexOutOfRange { index, length: 6 }),
+
             },
             VarArray::Seven(arr) => match index {
-                0 => Some(&mut arr[0]),
-                1 => Some(&mut arr[1]),
-                2 => Some(&mut arr[2]),
-                3 => Some(&mut arr[3]),
-                4 => Some(&mut arr[4]),
-                5 => Some(&mut arr[5]),
-                6 => Some(&mut arr[6]),
-                _ => None,
+                0 => Ok(&mut arr[0]),
+                1 => Ok(&mut arr[1]),
+                2 => Ok(&mut arr[2]),
+                3 => Ok(&mut arr[3]),
+                4 => Ok(&mut arr[4]),
+                5 => Ok(&mut arr[5]),
+                6 => Ok(&mut arr[6]),
+                _ => Err(VarArrayError::IndexOutOfRange { index, length: 7 }),
+
             },
             VarArray::Eight(arr) =>  match index {
-                0 => Some(&mut arr[0]),
-                1 => Some(&mut arr[1]),
-                2 => Some(&mut arr[2]),
-                3 => Some(&mut arr[3]),
-                4 => Some(&mut arr[4]),
-                5 => Some(&mut arr[5]),
-                6 => Some(&mut arr[6]),
-                7 => Some(&mut arr[7]),
-                _ => None,
+                0 => Ok(&mut arr[0]),
+                1 => Ok(&mut arr[1]),
+                2 => Ok(&mut arr[2]),
+                3 => Ok(&mut arr[3]),
+                4 => Ok(&mut arr[4]),
+                5 => Ok(&mut arr[5]),
+                6 => Ok(&mut arr[6]),
+                7 => Ok(&mut arr[7]),
+                _ => Err(VarArrayError::IndexOutOfRange { index, length: 8 }),
+
             },
-            VarArray::Etc(arr) => arr.get_mut(index),
+            VarArray::Etc(arr) => {
+                let length = arr.len();
+                arr.get_mut(index).ok_or(VarArrayError::IndexOutOfRange { index, length })
+            }
         }
     }
 
@@ -207,7 +218,7 @@ impl VarArray {
         }
     }
 
-    pub fn pointwise<F: Fn(Unit, Unit) -> Unit>(&self, rhs: &VarArray, op: F) -> Result<VarArray, VarArrayError> {
+    pub fn pointwise_two<F: Fn(Unit, Unit) -> Unit>(&self, rhs: &VarArray, op: F) -> Result<VarArray, VarArrayError> {
         match self {
             VarArray::Zero(_) => match rhs {
                 VarArray::Zero(_) => Ok(VarArray::Zero([])),
@@ -238,7 +249,7 @@ impl VarArray {
                 _ => Err(VarArrayError::LengthMismatch(self.len(), rhs.len()))
             },
             VarArray::Seven(a) => match rhs {
-                VarArray::Seven(b) => Ok(VarArray::Seven([op(a[0], b[0]), op(a[1], b[1]), op(a[2], b[2]), op(a[3], b[3]), op(a[4], b[4]), op(a[5], b[5]), op(a[6], a[6])])),
+                VarArray::Seven(b) => Ok(VarArray::Seven([op(a[0], b[0]), op(a[1], b[1]), op(a[2], b[2]), op(a[3], b[3]), op(a[4], b[4]), op(a[5], b[5]), op(a[6], b[6])])),
                 _ => Err(VarArrayError::LengthMismatch(self.len(), rhs.len()))
             },
             VarArray::Eight(a) => match rhs {
@@ -257,23 +268,23 @@ impl VarArray {
     }
 
     pub fn add(&self, rhs: &VarArray) -> Result<VarArray, VarArrayError> {
-        self.pointwise(rhs, Unit::add)
+        self.pointwise_two(rhs, Unit::add)
     }
 
     pub fn sub(&self, rhs: &VarArray) -> Result<VarArray, VarArrayError> {
-        self.pointwise(rhs, Unit::sub)
+        self.pointwise_two(rhs, Unit::sub)
     }
 
     pub fn div(&self, rhs: &VarArray) -> Result<VarArray, VarArrayError> {
-        self.pointwise(rhs, Unit::div)
+        self.pointwise_two(rhs, Unit::div)
     }
 
     pub fn mul(&self, rhs: &VarArray) -> Result<VarArray, VarArrayError> {
-        self.pointwise(rhs, Unit::mul)
+        self.pointwise_two(rhs, Unit::mul)
     }
 
     pub fn rem(&self, rhs: &VarArray) -> Result<VarArray, VarArrayError> {
-        self.pointwise(rhs, Unit::rem)
+        self.pointwise_two(rhs, Unit::rem)
     }
 }
 
@@ -327,8 +338,13 @@ impl VarArrayCompatible for VarArray {
     }
 }
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, PartialEq)]
 pub enum VarArrayError {
+    #[error("Index out of range: {index} not in {length}")]
+    IndexOutOfRange {
+        index: usize,
+        length: usize,
+    },
     #[error("Length mismatch: {0} and {1}")]
     LengthMismatch(usize, usize),
 }
@@ -353,7 +369,7 @@ mod test {
         let mut out = Vec::<VarArray>::new();
 
         for curr_limit in 0..limit {
-            out.push(VarArray::from(&inst_sample[0..curr_limit]));
+            out.push(VarArray::from(&inst_sample[0..=curr_limit]));
         }
 
         out
@@ -409,7 +425,7 @@ mod test {
                 if i < curr_len {
                     assert_eq!(varr.get(i).unwrap(), *sample.get(i).unwrap());
                 } else {
-                    assert!(varr.get(i).is_none());
+                    assert_eq!(varr.get(i), Result::Err(VarArrayError::IndexOutOfRange { index: i, length: varr.len() }));
                 }
             }
         }
@@ -439,7 +455,7 @@ mod test {
                 if i < curr_len {
                     assert_eq!(varr.get(i).unwrap(), *sample.get(i).unwrap() * 2);
                 } else {
-                    assert!(varr.get(i).is_none());
+                    assert_eq!(varr.get(i), Result::Err(VarArrayError::IndexOutOfRange { index: i, length: varr.len() }));
                 }
             }
         }
@@ -457,8 +473,6 @@ mod test {
 
             let zipped = varr.iter().zip(sample.iter().copied()).collect::<Box<[(Unit, Unit)]>>();
 
-            println!("{:?}", zipped);
-
             assert_eq!(zipped.len(), curr_len);
             assert!(zipped.iter().all(|(t, o)| t == o));
         }
@@ -467,115 +481,116 @@ mod test {
     #[test]
     pub fn add() {
         let limit = 32usize;
-        let sample = (0..limit).collect::<Box<[Unit]>>();
+        let sample_forwards = (0..limit).collect::<Box<[Unit]>>();
+        let sample_backwards = (0..limit*2).step_by(2).rev().collect::<Box<[Unit]>>();
 
-        let varrs = gen_varrs_with(limit, &sample);
+        let varrs_forwards = gen_varrs_with(limit, &sample_forwards);
+        let varrs_backwards = gen_varrs_with(limit, &sample_backwards);
 
-        for varr in varrs {
-            let applied = varr.add(&varr).unwrap();
-            let curr_len = applied.len();
+        for (varr_forwards, varr_backwards) in varrs_forwards.iter().zip(varrs_backwards.iter()) {
+            let curr_forwards_len = varr_forwards.len();
+            let curr_backwards_len = varr_backwards.len();
 
-            assert_eq!(varr.len(), applied.len());
+            let added = varr_forwards.add(varr_backwards).unwrap();
+            let reference = sample_forwards.iter().zip(sample_backwards.iter()).map(|(x, y)| x + y);
 
-            for i in 0..limit {
-                if i < curr_len {
-                    assert_eq!(applied.get(i).unwrap(), *sample.get(i).unwrap() * 2);
-                } else {
-                    assert!(varr.get(i).is_none());
-                }
-            }
+            assert_eq!(added.len(), curr_forwards_len);
+            assert_eq!(added.len(), curr_backwards_len);
+
+            assert!(added.iter().zip(reference).all(|(x, y)| x == y));
         }
     }
 
     #[test]
     pub fn sub() {
         let limit = 32usize;
-        let sample = (0..limit).collect::<Box<[Unit]>>();
+        let sample_forwards = (0..limit*2).step_by(2).collect::<Box<[Unit]>>();
+        let sample_backwards = (0..limit).collect::<Box<[Unit]>>();
 
-        let varrs = gen_varrs_with(limit, &sample);
+        let varrs_forwards = gen_varrs_with(limit, &sample_forwards);
+        let varrs_backwards = gen_varrs_with(limit, &sample_backwards);
 
-        for varr in varrs {
-            let applied = varr.sub(&varr).unwrap();
-            let curr_len = applied.len();
+        for (varr_forwards, varr_backwards) in varrs_forwards.iter().zip(varrs_backwards.iter()) {
+            let curr_forwards_len = varr_forwards.len();
+            let curr_backwards_len = varr_backwards.len();
 
-            assert_eq!(varr.len(), applied.len());
+            let subbed = varr_forwards.sub(varr_backwards).unwrap();
+            let reference = sample_forwards.iter().zip(sample_backwards.iter()).map(|(x, y)| x - y);
 
-            for i in 0..limit {
-                if i < curr_len {
-                    assert_eq!(applied.get(i).unwrap(), 0);
-                } else {
-                    assert!(varr.get(i).is_none());
-                }
-            }
+            assert_eq!(subbed.len(), curr_forwards_len);
+            assert_eq!(subbed.len(), curr_backwards_len);
+
+            assert!(subbed.iter().zip(reference).all(|(x, y)| x == y));
         }
     }
+
 
     #[test]
     pub fn div() {
         let limit = 32usize;
-        let sample = (1..limit + 1).collect::<Box<[Unit]>>();
+        let sample_forwards = (0..limit*512).step_by(512).collect::<Box<[Unit]>>();
+        let sample_backwards = (1..=limit).collect::<Box<[Unit]>>();
 
-        let varrs = gen_varrs_with(limit, &sample);
+        let varrs_forwards = gen_varrs_with(limit, &sample_forwards);
+        let varrs_backwards = gen_varrs_with(limit, &sample_backwards);
 
-        for varr in varrs {
-            let applied = varr.div(&varr).unwrap();
-            let curr_len = applied.len();
+        for (varr_forwards, varr_backwards) in varrs_forwards.iter().zip(varrs_backwards.iter()) {
+            let curr_forwards_len = varr_forwards.len();
+            let curr_backwards_len = varr_backwards.len();
 
-            assert_eq!(varr.len(), applied.len());
+            let divided = varr_forwards.div(varr_backwards).unwrap();
+            let reference = sample_forwards.iter().zip(sample_backwards.iter()).map(|(x, y)| x / y);
 
-            for i in 0..limit {
-                if i < curr_len {
-                    assert_eq!(applied.get(i).unwrap(), 1);
-                } else {
-                    assert!(varr.get(i).is_none());
-                }
-            }
+            assert_eq!(divided.len(), curr_forwards_len);
+            assert_eq!(divided.len(), curr_backwards_len);
+
+            assert!(divided.iter().zip(reference).all(|(x, y)| x == y));
         }
     }
 
     #[test]
     pub fn mul() {
         let limit = 32usize;
-        let sample = (0..limit).collect::<Box<[Unit]>>();
+        let sample_forwards = (0..limit*2).step_by(2).collect::<Box<[Unit]>>();
+        let sample_backwards = (0..limit).collect::<Box<[Unit]>>();
 
-        let varrs = gen_varrs_with(limit, &sample);
+        let varrs_forwards = gen_varrs_with(limit, &sample_forwards);
+        let varrs_backwards = gen_varrs_with(limit, &sample_backwards);
 
-        for varr in varrs {
-            let applied = varr.mul(&varr).unwrap();
-            let curr_len = applied.len();
+        for (varr_forwards, varr_backwards) in varrs_forwards.iter().zip(varrs_backwards.iter()) {
+            let curr_forwards_len = varr_forwards.len();
+            let curr_backwards_len = varr_backwards.len();
 
-            assert_eq!(varr.len(), applied.len());
+            let multiplied = varr_forwards.mul(varr_backwards).unwrap();
+            let reference = sample_forwards.iter().zip(sample_backwards.iter()).map(|(x, y)| x * y);
 
-            for i in 0..limit {
-                if i < curr_len {
-                    assert_eq!(applied.get(i).unwrap(), (*sample.get(i).unwrap()).pow(2));
-                } else {
-                    assert!(varr.get(i).is_none());
-                }
-            }
+            assert_eq!(multiplied.len(), curr_forwards_len);
+            assert_eq!(multiplied.len(), curr_backwards_len);
+
+            assert!(multiplied.iter().zip(reference).all(|(x, y)| x == y));
         }
     }
 
     #[test]
     pub fn rem() {
         let limit = 32usize;
-        let sample = (1..(limit + 1)).collect::<Box<[Unit]>>();
+        let sample_forwards = (1..=limit).collect::<Box<[Unit]>>();
+        let sample_backwards = (2..=limit*2).step_by(2).collect::<Box<[Unit]>>();
 
-        let varrs = gen_varrs_with(limit, &sample);
+        let varrs_forwards = gen_varrs_with(limit, &sample_forwards);
+        let varrs_backwards = gen_varrs_with(limit, &sample_backwards);
 
-        for varr in varrs {
-            let applied = varr.rem(&varr).unwrap();
-            let curr_len = applied.len();
+        for (varr_forwards, varr_backwards) in varrs_forwards.iter().zip(varrs_backwards.iter()) {
+            let curr_forwards_len = varr_forwards.len();
+            let curr_backwards_len = varr_backwards.len();
 
-            assert_eq!(varr.len(), applied.len());
+            let remainders = varr_forwards.rem(varr_backwards).unwrap();
+            let reference = sample_forwards.iter().zip(sample_backwards.iter()).map(|(x, y)| x % y);
 
-            for i in 0..limit {
-                if i < curr_len {
-                    assert_eq!(applied.get(i).unwrap(), 0);
-                } else {
-                    assert!(varr.get(i).is_none());
-                }
-            }
+            assert_eq!(remainders.len(), curr_forwards_len);
+            assert_eq!(remainders.len(), curr_backwards_len);
+
+            assert!(remainders.iter().zip(reference).all(|(x, y)| x == y));
         }
     }
 }
