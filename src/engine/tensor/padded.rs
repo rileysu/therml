@@ -1,8 +1,8 @@
-use crate::helper::{Shape, Stride, Position, VarArrayCompatible, VarArray, Slice};
-use super::{EngineTensor, allowed_unit::AllowedUnit, factory::EngineTensorFactory, iter::EngineTensorUnitIterator, Array, extension::EmptyExtensionProvider};
+use crate::{engine::unit::UnitCompatible, helper::{Position, Shape, Slice, VarArray, VarArrayCompatible}};
+use super::{EngineTensor, factory::EngineTensorFactory, iter::EngineTensorUnitIterator, Array, extension::EmptyExtensionProvider};
 
-pub trait AllowedPadded: AllowedUnit {}
-impl<T: AllowedUnit> AllowedPadded for T {}
+pub trait AllowedPadded: UnitCompatible {}
+impl<T: UnitCompatible> AllowedPadded for T {}
 
 #[derive(Debug)]
 pub struct Padded<T: AllowedPadded> {

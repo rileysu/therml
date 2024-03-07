@@ -5,17 +5,17 @@ use std::collections::{HashSet, HashMap};
 use slotmap::{SlotMap, new_key_type};
 use thiserror::Error;
 
-use crate::engine::{tensor::{EngineTensor, allowed_unit::AllowedUnit, factory::EngineTensorFactory, iter::EngineTensorUnitIterator}, Engine, EngineError};
+use crate::engine::{tensor::{factory::EngineTensorFactory, iter::EngineTensorUnitIterator, EngineTensor}, unit::UnitCompatible, Engine, EngineError};
 
 use self::edge::Edge;
 
 #[derive(Debug)]
-pub struct Node<T: AllowedUnit> {
+pub struct Node<T: UnitCompatible> {
     tensor: Option<Box<dyn EngineTensor<Unit = T>>>,
     edge: Edge<T>,
 }
 
-impl<T: AllowedUnit> Node<T> {
+impl<T: UnitCompatible> Node<T> {
     fn create_root(tensor: Box<dyn EngineTensor<Unit = T>>) -> Self {
         Self {
             tensor: Some(tensor),
@@ -61,11 +61,11 @@ impl<T: AllowedUnit> Node<T> {
 new_key_type! { pub struct NodeKey; }
 
 #[derive(Debug)]
-pub struct CompGraph<T: AllowedUnit> {
+pub struct CompGraph<T: UnitCompatible> {
     nodes: SlotMap<NodeKey, Node<T>>,
 }
 
-impl<T: AllowedUnit> CompGraph<T> {
+impl<T: UnitCompatible> CompGraph<T> {
     pub fn new() -> Self {
         Self {
             nodes: SlotMap::with_key(),

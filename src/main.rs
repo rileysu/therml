@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+#![allow(unused_macros)]
 
 use engine::{tensor::Array, basic::Basic};
 use helper::Shape;

@@ -1,5 +1,5 @@
-use crate::helper::Position;
-use super::{allowed_unit::AllowedUnit, EngineTensor};
+use crate::{engine::unit::UnitCompatible, helper::Position};
+use super::EngineTensor;
 
 /*pub struct EngineTensorIterator<'a, T: AllowedUnit> {
     tensor: &'a dyn EngineTensor<Unit = T>,
@@ -41,14 +41,14 @@ impl<'a, T: AllowedUnit> Iterator for EngineTensorIterator<'a, T> {
 
 //TODO basic impl that isn't optimised
 //It can be enhanced by fetching chunks of contig memory if available
-pub struct EngineTensorUnitIterator<'a, T: AllowedUnit> {
+pub struct EngineTensorUnitIterator<'a, T: UnitCompatible> {
     tensor: &'a dyn EngineTensor<Unit = T>,
     curr: Position,
     finish: Position,
     ended: bool,
 }
 
-impl<'a, T: AllowedUnit> EngineTensorUnitIterator<'a, T> {
+impl<'a, T: UnitCompatible> EngineTensorUnitIterator<'a, T> {
     pub fn new(tensor: &'a dyn EngineTensor<Unit = T>) -> Self {
         Self {
             tensor,
@@ -59,7 +59,7 @@ impl<'a, T: AllowedUnit> EngineTensorUnitIterator<'a, T> {
     }
 }
 
-impl<T: AllowedUnit> Iterator for EngineTensorUnitIterator<'_, T> {
+impl<T: UnitCompatible> Iterator for EngineTensorUnitIterator<'_, T> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {

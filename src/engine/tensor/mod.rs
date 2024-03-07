@@ -9,12 +9,13 @@ use std::sync::Arc;
 use crate::helper::{Shape, Stride, Position, Slice, VarArrayCompatible};
 use self::extension::{ExtensionProvider, EmptyExtensionProvider};
 use self::factory::EngineTensorFactory;
-use self::{iter::EngineTensorUnitIterator, allowed_unit::{AllowedUnit, AllowedArray, AllowedQuant}};
+use self::{iter::EngineTensorUnitIterator, allowed_unit::{AllowedArray, AllowedQuant}};
 use std::fmt::Debug;
+use super::unit::UnitCompatible;
 
 //Unless otherwise specified every function should make as shallow of a copy as possible
 pub trait EngineTensor: Debug {
-    type Unit: AllowedUnit;
+    type Unit: UnitCompatible;
 
     fn shape(&self) -> &Shape;
     fn get(&self, pos: &Position) -> Self::Unit;
@@ -28,7 +29,7 @@ pub trait EngineTensor: Debug {
     fn extensions(&self)-> Box<dyn ExtensionProvider + '_>;
 }
 
-impl<T: AllowedUnit> PartialEq for dyn EngineTensor<Unit = T> + '_ {
+impl<T: UnitCompatible> PartialEq for dyn EngineTensor<Unit = T> + '_ {
     fn eq(&self, other: &Self) -> bool {
         self.shape() == other.shape() && self.iter_units().zip(other.iter_units()).all(|(a, b)| a == b)
     }

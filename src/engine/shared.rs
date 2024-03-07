@@ -1,16 +1,18 @@
 use std::iter;
 
+use num::Zero;
+
 use crate::{
     engine::tensor::padded::Padded,
     helper::{Interval, Position, Shape, Slice, Stride, VarArrayCompatible},
 };
 
-use super::tensor::{allowed_unit::AllowedUnit, factory::EngineTensorFactory, Array, EngineTensor};
+use super::{tensor::{factory::EngineTensorFactory, Array, EngineTensor}, unit::UnitCompatible};
 
 //a: (batches, in_channels, img_y, img_x)
 //kernel_shape: (in_channels, k_y, k_x)
 //out: (batches, in_channels, out_y, out_x, k_y * k_x)
-pub fn im2col_2d<T: AllowedUnit + Default, E: EngineTensorFactory<Unit = T>>(
+pub fn im2col_2d<T: UnitCompatible, E: EngineTensorFactory<Unit = T>>(
     a: &dyn EngineTensor<Unit = T>,
     kernel_shape: &Shape,
     padding: usize,
@@ -23,7 +25,7 @@ pub fn im2col_2d<T: AllowedUnit + Default, E: EngineTensorFactory<Unit = T>>(
     let a_padded = Padded::pad_from(
         a.clone(),
         [0, 0, padding, padding].as_slice().into(),
-        T::default(),
+        T::zero(),
     );
 
     let img_y = a_padded.shape().get(2).unwrap();
@@ -46,7 +48,7 @@ pub fn im2col_2d<T: AllowedUnit + Default, E: EngineTensorFactory<Unit = T>>(
 
     //Buffer used for output
 
-    let mut buffer = Vec::<T>::from_iter(iter::repeat(T::default()).take(out_shape.elements()));
+    let mut buffer = Vec::<T>::from_iter(iter::repeat(T::zero()).take(out_shape.elements()));
     buffer.shrink_to_fit();
 
     for y in 0..out_y {

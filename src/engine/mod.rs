@@ -1,18 +1,19 @@
 pub mod tensor;
+pub mod unit;
 pub mod basic;
 
 mod shared;
 mod util;
 
 use crate::helper::{Shape, PositionError};
-use self::tensor::{EngineTensor, allowed_unit::AllowedUnit, factory::EngineTensorFactory};
+use self::{tensor::{factory::EngineTensorFactory, EngineTensor}, unit::UnitCompatible};
 use thiserror::Error;
 
 //Using PyTorch operations as a base
 //Using a trait over an enum has little extra cost and allows for extension
 //Engines provide different optimisations for Tensor operations
 //Factory defines the unit as well as output tensor type
-pub trait Engine<T: AllowedUnit> {
+pub trait Engine<T: UnitCompatible> {
     //Pointwise Single
     fn abs<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
     fn neg<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
@@ -33,6 +34,7 @@ pub trait Engine<T: AllowedUnit> {
 
     //Conv
     fn conv2d<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>, kernel: &dyn EngineTensor<Unit = T>, padding: usize, stride: usize) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
+    //fn im2col_2d<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>, kernel_shape: &Shape, padding: usize, stride: usize) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
 }
 
 #[derive(Error, Debug)]

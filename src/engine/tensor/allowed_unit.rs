@@ -1,13 +1,8 @@
-use std::fmt::Debug;
+use crate::engine::unit::UnitCompatible;
 
-use num::Num;
+pub trait AllowedArray: UnitCompatible {}
+impl<T: UnitCompatible> AllowedArray for T {}
 
-pub trait AllowedUnit: Num + Sized + Copy + Debug + 'static {}
-impl<T: Num + Sized + Copy + Debug + 'static> AllowedUnit for T {}
-
-pub trait AllowedArray: AllowedUnit {}
-impl<T: AllowedUnit> AllowedArray for T {}
-
-pub trait AllowedQuant: AllowedUnit {}
+pub trait AllowedQuant: UnitCompatible {}
 impl AllowedQuant for f32 {}
 impl AllowedQuant for f64 {}

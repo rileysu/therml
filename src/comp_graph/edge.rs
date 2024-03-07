@@ -1,9 +1,9 @@
-use crate::engine::{tensor::{allowed_unit::AllowedUnit, EngineTensor}, EngineError};
+use crate::engine::{tensor::EngineTensor, unit::UnitCompatible, EngineError};
 
 use super::{NodeKey, ComputationGraphError};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum Edge<T: AllowedUnit> {
+pub enum Edge<T: UnitCompatible> {
     Root,
 
     Abs(NodeKey, fn(&dyn EngineTensor<Unit = T>) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>),
@@ -22,7 +22,7 @@ pub enum Edge<T: AllowedUnit> {
     Div(NodeKey, NodeKey, fn(&dyn EngineTensor<Unit = T>, &dyn EngineTensor<Unit = T>) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>),
 }
 
-impl<T: AllowedUnit> Edge<T> {
+impl<T: UnitCompatible> Edge<T> {
     pub fn nodes(&self) -> EdgeNodesIterator<T> {
         EdgeNodesIterator::<T>::new(self)
     }
@@ -63,12 +63,12 @@ impl<T: AllowedUnit> Edge<T> {
     }
 }
 
-pub struct EdgeNodesIterator<'a, T: AllowedUnit> {
+pub struct EdgeNodesIterator<'a, T: UnitCompatible> {
     edge: &'a Edge<T>,
     pos: usize,
 }
 
-impl<'a, T: AllowedUnit> EdgeNodesIterator<'a, T> {
+impl<'a, T: UnitCompatible> EdgeNodesIterator<'a, T> {
     pub fn new(edge: &'a Edge<T>) -> Self {
         Self {
             edge,
@@ -77,7 +77,7 @@ impl<'a, T: AllowedUnit> EdgeNodesIterator<'a, T> {
     }
 }
 
-impl<'a, T: AllowedUnit> Iterator for EdgeNodesIterator<'a, T> {
+impl<'a, T: UnitCompatible> Iterator for EdgeNodesIterator<'a, T> {
     type Item = NodeKey;
 
     fn next(&mut self) -> Option<Self::Item> {

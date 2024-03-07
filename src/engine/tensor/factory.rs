@@ -1,11 +1,11 @@
 use std::sync::Arc;
-use crate::helper::{Shape, Stride};
-use super::{allowed_unit::{AllowedUnit, AllowedArray, AllowedQuant}, EngineTensor, Array, Quant};
+use crate::{engine::unit::UnitCompatible, helper::{Shape, Stride}};
+use super::{allowed_unit::{AllowedArray, AllowedQuant}, EngineTensor, Array, Quant};
 
 pub trait EngineTensorFactory
 where Self: Sized 
 {
-    type Unit: AllowedUnit;
+    type Unit: UnitCompatible;
 
     fn from_iter(iter: impl Iterator<Item = Self::Unit>, shape: Shape) -> Box<dyn EngineTensor<Unit = Self::Unit>>;
     fn from_slice(data: &[Self::Unit], shape: Shape) -> Box<dyn EngineTensor<Unit = Self::Unit>>;
