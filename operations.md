@@ -5,6 +5,13 @@ Check indictates support
 * Pointwise Single
     * [x] abs
     * [x] neg
+
+    * [ ] average_pool
+    * [ ] batch_norm
+
+    * [ ] relu
+    * [ ] leakyrelu
+    * [ ] sigmoid
     
 * Pointwise Scalar (broadcast?)
     * [x] add_scalar
@@ -21,7 +28,10 @@ Check indictates support
     * [x] div
 
 * Reduction
-    * ...
+    * [ ] max
+    * [ ] min 
+    * [ ] sum
+    * [ ] product
 
 * Creation
     * [ ] zeroes
@@ -34,3 +44,9 @@ Check indictates support
     * [x] slice
     * [x] reshape
     * [ ] concat
+
+* Not Supported (Out of scope operations or units that aren't supported)
+    * [ ] affine_grid
+    * [ ] and
+    * [ ] arg_max
+    * [ ] arg_min

@@ -86,12 +86,12 @@ pub fn im2col_2d<T: UnitCompatible, E: EngineTensorFactory<Unit = T>>(
         }
     }
 
-    E::from_slice(buffer.as_slice(), out_shape)
+    E::from_slice(buffer.as_slice(), out_shape).generic()
 }
 
 #[cfg(test)]
 mod test {
-    use crate::engine::tensor::Array;
+    use crate::engine::tensor::{generic::EngineTensorGeneric, Array};
 
     use super::*;
 
@@ -182,7 +182,7 @@ mod test {
             a_shape,
         );
 
-        let res = im2col_2d::<_, Array<_>>(a.as_ref(), &kernel_shape, 1, 1);
+        let res = im2col_2d::<_, Array<_>>(a.generic().as_ref(), &kernel_shape, 1, 1);
 
         for (res_element, expected_element) in res.iter_units().zip(expected.iter()) {
             assert_eq!(res_element, *expected_element);

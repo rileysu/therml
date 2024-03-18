@@ -264,30 +264,6 @@ impl<T: UnitCompatible> CompGraph<T> {
         CompGraphTensor::new(self.create_node(Edge::Neg(*a.node_key(), E::neg::<F>)))
     }
 
-    pub fn add_scalar<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, s: T, a: &CompGraphTensor) -> CompGraphTensor {
-        CompGraphTensor::new(self.create_node(Edge::AddScalar(s, *a.node_key(), E::add_scalar::<F>)))
-    }
-
-    pub fn sub_scalar_lh<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, s: T, a: &CompGraphTensor) -> CompGraphTensor {
-        CompGraphTensor::new(self.create_node(Edge::SubScalarLH(s, *a.node_key(), E::sub_scalar_lh::<F>)))
-    }
-
-    pub fn sub_scalar_rh<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, a: &CompGraphTensor, s: T) -> CompGraphTensor {
-        CompGraphTensor::new(self.create_node(Edge::SubScalarRH(*a.node_key(), s, E::sub_scalar_rh::<F>)))
-    }
-
-    pub fn mul_scalar<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, s: T, a: &CompGraphTensor) -> CompGraphTensor {
-        CompGraphTensor::new(self.create_node(Edge::MulScalar(s, *a.node_key(), E::mul_scalar::<F>)))
-    }
-
-    pub fn div_scalar_lh<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, s: T, a: &CompGraphTensor) -> CompGraphTensor {
-        CompGraphTensor::new(self.create_node(Edge::DivScalarLH(s, *a.node_key(), E::div_scalar_lh::<F>)))
-    }
-
-    pub fn div_scalar_rh<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, a: &CompGraphTensor, s: T) -> CompGraphTensor {
-        CompGraphTensor::new(self.create_node(Edge::DivScalarRH(*a.node_key(), s, E::div_scalar_rh::<F>)))
-    }
-
     pub fn add<E: Engine<T>, F: EngineTensorFactory<Unit = T>>(&mut self, a: &CompGraphTensor, b: &CompGraphTensor) -> CompGraphTensor {
         CompGraphTensor::new(self.create_node(Edge::Add(*a.node_key(), *b.node_key(), E::add::<F>)))
     }
@@ -344,43 +320,40 @@ pub enum ComputationGraphError {
 mod test {
     use num::traits::Pow;
 
-    use crate::{engine::{tensor::Array, basic::Basic}, helper::Shape};
+    use crate::{engine::{basic::Basic, tensor::{generic::EngineTensorGeneric, Array}}, helper::Shape};
 
     use super::*;
 
     pub fn init_simple_graph() -> (CompGraphTensor, CompGraphTensor, CompGraphTensor, Box<dyn EngineTensor<Unit = f32>>, CompGraph<f32>) {
         let mut graph = CompGraph::<f32>::new();
 
-        let root1 = graph.create_root(Array::from_slice([0.0, 1.0, 2.0, 3.0].as_slice(), Shape::from([2, 2].as_slice())));
-        let root2 = graph.create_root(Array::from_slice([0.0, 1.0, 2.0, 3.0].as_slice(), Shape::from([2, 2].as_slice())));
+        let root1 = graph.create_root(Array::from_slice([0.0, 1.0, 2.0, 3.0].as_slice(), Shape::from([2, 2].as_slice())).generic());
+        let root2 = graph.create_root(Array::from_slice([0.0, 1.0, 2.0, 3.0].as_slice(), Shape::from([2, 2].as_slice())).generic());
 
         let added = graph.add::<Basic, Array<f32>>(&root1, &root2);
 
         let expected = Array::from_slice([0.0, 2.0, 4.0, 6.0].as_slice(), Shape::from([2, 2].as_slice()));
 
-        return (root1, root2, added, expected, graph);
+        return (root1, root2, added, expected.generic(), graph);
     }
 
     pub fn init_complex_graph() -> (CompGraphTensor, Box<dyn EngineTensor<Unit = f32>>, Box<dyn EngineTensor<Unit = f32>>, CompGraph<f32>) {
         let mut graph = CompGraph::<f32>::new();
 
-        let root1 = graph.create_root(Array::from_slice([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0].as_slice(), Shape::from([3, 3].as_slice())));
-        let root2 = graph.create_root(Array::from_slice([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0].as_slice(), Shape::from([3, 3].as_slice())));
-        let root3 = graph.create_root(Array::from_slice([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0].as_slice(), Shape::from([3, 3].as_slice())));
-        let root4 = graph.create_root(Array::from_slice([1.0, 4.0, 9.0, 16.0, 25.0, 36.0, 49.0, 64.0, 81.0].as_slice(), Shape::from([3, 3].as_slice())));
+        let root1 = graph.create_root(Array::from_slice([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0].as_slice(), Shape::from([3, 3].as_slice())).generic());
+        let root2 = graph.create_root(Array::from_slice([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0].as_slice(), Shape::from([3, 3].as_slice())).generic());
+        let root3 = graph.create_root(Array::from_slice([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0].as_slice(), Shape::from([3, 3].as_slice())).generic());
+        let root4 = graph.create_root(Array::from_slice([1.0, 4.0, 9.0, 16.0, 25.0, 36.0, 49.0, 64.0, 81.0].as_slice(), Shape::from([3, 3].as_slice())).generic());
 
         let op1 = graph.div::<Basic, Array<f32>>(&root4, &root1);
         let op2 = graph.mul::<Basic, Array<f32>>(&op1, &root2);
         let op3 = graph.sub::<Basic, Array<f32>>(&op2, &root3);
 
-        let op4 = graph.mul_scalar::<Basic, Array<f32>>(2.0, &op3);
-        let op5 = graph.div_scalar_rh::<Basic, Array<f32>>(&op4, 2.0);
+        let op4 = graph.mul::<Basic, Array<f32>>(&op3, &op3);
 
-        let op6 = graph.mul::<Basic, Array<f32>>(&op5, &op5);
+        let op5 = graph.div::<Basic, Array<f32>>(&op4, &root1);
 
-        let op7 = graph.div::<Basic, Array<f32>>(&op6, &root1);
-
-        return (op7, Array::from_slice([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0].as_slice(), Shape::from([3, 3].as_slice())), Array::from_slice([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0].as_slice(), Shape::from([3, 3].as_slice())), graph);
+        return (op5, Array::from_slice([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0].as_slice(), Shape::from([3, 3].as_slice())).generic(), Array::from_slice([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0].as_slice(), Shape::from([3, 3].as_slice())).generic(), graph);
     }
 
     #[test]
@@ -470,7 +443,7 @@ mod test {
 
         let tensor = new_node_keys.last().unwrap();
 
-        let expected = Array::from_iter( &mut expected_original.iter_units().map(|x| x * 2.0f32.pow(power)), expected_original.shape().clone());
+        let expected = Array::from_iter( &mut expected_original.iter_units().map(|x| x * 2.0f32.pow(power)), expected_original.shape().clone()).generic();
 
         graph.non_populating_eval(&tensor).unwrap();
 

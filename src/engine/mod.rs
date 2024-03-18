@@ -17,20 +17,14 @@ pub trait Engine<T: UnitCompatible> {
     //Pointwise Single
     fn abs<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
     fn neg<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
-    
-    //Pointwise Scalar
-    fn add_scalar<E: EngineTensorFactory<Unit = T>>(s: T, a: &dyn EngineTensor<Unit = T>) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
-    fn sub_scalar_lh<E: EngineTensorFactory<Unit = T>>(s: T, a: &dyn EngineTensor<Unit = T>) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
-    fn sub_scalar_rh<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>, s: T) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
-    fn mul_scalar<E: EngineTensorFactory<Unit = T>>(s: T, a: &dyn EngineTensor<Unit = T>) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
-    fn div_scalar_lh<E: EngineTensorFactory<Unit = T>>(s: T, a: &dyn EngineTensor<Unit = T>) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
-    fn div_scalar_rh<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>, s: T) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
 
     //Pointwise Double
     fn add<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>, b: &dyn EngineTensor<Unit = T>) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
     fn sub<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>, b: &dyn EngineTensor<Unit = T>) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
     fn mul<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>, b: &dyn EngineTensor<Unit = T>) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
     fn div<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>, b: &dyn EngineTensor<Unit = T>) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
+
+    fn matmul<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>, b: &dyn EngineTensor<Unit = T>) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
 
     //Conv
     fn conv2d<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>, kernel: &dyn EngineTensor<Unit = T>, padding: usize, stride: usize) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
@@ -43,6 +37,8 @@ pub enum EngineError {
     ShapeMismatch(Shape, Shape),
     #[error("The dimension {0} does not match expected {1}")]
     DimensionMismatch(usize, usize),
+    #[error("The dimension {0} does not meet at least {1}")]
+    NotEnoughDimensions(usize, usize),
     #[error("Got {0} dimensions but expected {1}")]
     DimensionsMismatch(usize, usize),
     #[error("Position operation failed: {0}")]

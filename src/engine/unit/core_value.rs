@@ -7,11 +7,11 @@ macro_rules! core_value_float {
     ($unit:ty) => {
         impl CoreValue for $unit {
             fn zero() -> Self {
-                0.0
+                0.
             }
         
             fn one() -> Self {
-                1.0
+                1.
             }
         }
     };

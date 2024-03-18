@@ -9,10 +9,13 @@ use self::{core_value::CoreValue, signed_op::SignedOp};
 pub mod core_value;
 pub mod signed_op;
 
-pub trait Base:
-    Sized
-    + Copy
-    + Debug
+pub trait Base: Sized + Copy + Debug + 'static {}
+impl<T: Sized + Copy + Debug + 'static> Base for T {}
+
+pub trait UnitCompatible:
+    Base
+    + SignedOp
+    + CoreValue
     + Add<Output = Self>
     + Sub<Output = Self>
     + Mul<Output = Self>
@@ -22,13 +25,12 @@ pub trait Base:
     + Product
     + PartialEq
     + PartialOrd
-    + 'static
 {
 }
 impl<
-        T: Sized
-            + Copy
-            + Debug
+        T: Base
+            + SignedOp
+            + CoreValue
             + Add<Output = Self>
             + Sub<Output = Self>
             + Mul<Output = Self>
@@ -37,11 +39,7 @@ impl<
             + Sum
             + Product
             + PartialEq
-            + PartialOrd
-            + 'static,
-    > Base for T
+            + PartialOrd,
+    > UnitCompatible for T
 {
 }
-
-pub trait UnitCompatible: SignedOp + CoreValue {}
-impl<T: SignedOp + CoreValue> UnitCompatible for T {}

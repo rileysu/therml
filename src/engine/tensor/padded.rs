@@ -1,5 +1,5 @@
 use crate::{engine::unit::UnitCompatible, helper::{Position, Shape, Slice, VarArray, VarArrayCompatible}};
-use super::{EngineTensor, factory::EngineTensorFactory, iter::EngineTensorUnitIterator, Array, extension::EmptyExtensionProvider};
+use super::{extension::EmptyExtensionProvider, factory::EngineTensorFactory, generic::EngineTensorGeneric, iter::EngineTensorUnitIterator, Array, EngineTensor};
 
 pub trait AllowedPadded: UnitCompatible {}
 impl<T: UnitCompatible> AllowedPadded for T {}
@@ -70,6 +70,8 @@ impl<T: AllowedPadded> Padded<T> {
         abs_pos.iter().zip(self.low_padding.iter()).zip(self.high_padding.iter()).all(|((pos, low), hi)| (low..hi).contains(&pos))
     }
 }
+
+impl<T: AllowedPadded> EngineTensorGeneric for Padded<T> {}
 
 impl<T: AllowedPadded> EngineTensor for Padded<T> {
     type Unit = T;
@@ -142,7 +144,7 @@ impl<T: AllowedPadded> EngineTensor for Padded<T> {
 
     //Reshaping might be possible without a deep copy
     fn reshape(&self, shape: &Shape) -> Box<dyn EngineTensor<Unit = Self::Unit>> {
-        Array::from_iter(self.iter_units(), shape.clone())
+        Array::from_iter(self.iter_units(), shape.clone()).generic()
     }
 
     //This is possible with step = 0
@@ -175,7 +177,6 @@ impl<T: AllowedPadded> EngineTensor for Padded<T> {
     fn extensions(&self)-> Box<dyn super::extension::ExtensionProvider + '_> {
         Box::new(EmptyExtensionProvider::from(self))
     }
-    
 }
 
 #[cfg(test)]
@@ -187,10 +188,10 @@ mod test {
     fn create_examples() -> Vec<Padded<f32>> {
         vec![
             //Padded::pad_from(Array::from_iter([0.0; 0].iter().copied(), shape![]), varr![], 0.0),
-            Padded::pad_from(Array::from_iter((1..=9).map(|x| x as f32 / 9.0), shape![9]), varr![1], 0.0),
-            Padded::pad_from(Array::from_iter((1..=9).map(|x| x as f32 / 9.0), shape![3, 3]), varr![1, 1], 0.0),
-            Padded::pad_from(Array::from_iter((1..=105).map(|x| x as f32 / 105.0), shape![3, 5, 7]), varr![1, 2, 3], 0.0),
-            Padded::pad_from(Array::from_iter((1..=105).map(|x| x as f32 / 105.0), shape![1, 1, 3, 5, 7]), varr![0, 1, 1, 2, 3], 0.0),
+            Padded::pad_from(Array::from_iter((1..=9).map(|x| x as f32 / 9.0), shape![9]).generic(), varr![1], 0.0),
+            Padded::pad_from(Array::from_iter((1..=9).map(|x| x as f32 / 9.0), shape![3, 3]).generic(), varr![1, 1], 0.0),
+            Padded::pad_from(Array::from_iter((1..=105).map(|x| x as f32 / 105.0), shape![3, 5, 7]).generic(), varr![1, 2, 3], 0.0),
+            Padded::pad_from(Array::from_iter((1..=105).map(|x| x as f32 / 105.0), shape![1, 1, 3, 5, 7]).generic(), varr![0, 1, 1, 2, 3], 0.0),
         ]
     }
 

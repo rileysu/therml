@@ -1,7 +1,9 @@
 pub mod extension;
 pub mod iter;
 pub mod allowed_unit;
+pub mod builder;
 pub mod factory;
+pub mod generic;
 pub mod padded;
 
 use std::sync::Arc;
@@ -9,6 +11,7 @@ use std::sync::Arc;
 use crate::helper::{Shape, Stride, Position, Slice, VarArrayCompatible};
 use self::extension::{ExtensionProvider, EmptyExtensionProvider};
 use self::factory::EngineTensorFactory;
+use self::generic::EngineTensorGeneric;
 use self::{iter::EngineTensorUnitIterator, allowed_unit::{AllowedArray, AllowedQuant}};
 use std::fmt::Debug;
 use super::unit::UnitCompatible;
@@ -26,7 +29,7 @@ pub trait EngineTensor: Debug {
     fn reshape(&self, shape: &Shape) -> Box<dyn EngineTensor<Unit = Self::Unit>>;
     fn broadcast_splice(&self, pos: usize, sub: &[usize]) -> Box<dyn EngineTensor<Unit = Self::Unit>>;
 
-    fn extensions(&self)-> Box<dyn ExtensionProvider + '_>;
+    fn extensions(&self) -> Box<dyn ExtensionProvider + '_>;
 }
 
 impl<T: UnitCompatible> PartialEq for dyn EngineTensor<Unit = T> + '_ {
@@ -128,7 +131,7 @@ impl<T: AllowedArray> EngineTensor for Array<T> {
                     offset: self.offset,
                 })
             } else {
-                Array::<T>::from_iter(self.iter_units(), shape.clone())
+                Array::<T>::from_iter(self.iter_units(), shape.clone()).generic()
             }
         } else {
             todo!()

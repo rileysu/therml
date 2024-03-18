@@ -75,6 +75,6 @@ return tensor::from_slice(&out_units): (y, x, batches, out_channels)
     - Maybe seperate graphs from context and create a new graph per training / inference iteration
     - Use phantom to make tensors references to graph so it can't outlive graph
 - Model how the graph interface should look externally as ergonomics is an issue rn
-- Make a variable length array to use in position, shape, slice
-    - Each can use the underlying type to handle basic operations
-- Optimize incrementing position
+- Optimize incrementing position (partially done)
+- Create structure to buffer tensor in construction for out of order population
+    - Might be a generic constructor if I can think of an interface
