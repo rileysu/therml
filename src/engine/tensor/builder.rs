@@ -1,16 +1,16 @@
 use std::ops::RangeBounds;
 
-use crate::engine::unit::UnitCompatible;
+use crate::{engine::unit::UnitCompatible, helper::Shape};
 
 use super::EngineTensor;
 
-trait EngineTensorBuilder {
+pub trait EngineTensorBuilder {
     type Unit: UnitCompatible;
     type Tensor: EngineTensor;
 
-    fn splice<R: RangeBounds<usize>, I: IntoIterator<Item = Self::Unit>>(range: R, replace_with: I);
+    fn new(shape: Shape) -> Self;
 
-    fn construct() -> Box<dyn EngineTensor<Unit = Self::Unit>>;
+    fn splice<R: RangeBounds<usize>, I: IntoIterator<Item = Self::Unit>>(&mut self, range: R, replace_with: I);
+
+    fn construct(self) -> Self::Tensor;
 }
-
-struct ArrayBuilder;

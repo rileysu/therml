@@ -1,9 +1,5 @@
 pub mod tensor;
 pub mod unit;
-pub mod basic;
-
-mod shared;
-mod util;
 
 use crate::helper::{Shape, PositionError};
 use self::{tensor::{factory::EngineTensorFactory, EngineTensor}, unit::UnitCompatible};

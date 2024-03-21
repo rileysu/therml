@@ -1,6 +1,4 @@
-use crate::helper::{Shape, VarArrayCompatible};
-
-use super::EngineError;
+use crate::{engine::EngineError, helper::{Shape, VarArrayCompatible}};
 
 pub fn return_if_matched_shape<T>(a: &Shape, b: &Shape, out: T) -> Result<T, EngineError> {
     if a == b {

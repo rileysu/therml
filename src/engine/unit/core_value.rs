@@ -1,4 +1,4 @@
-pub trait CoreValue {
+pub trait CoreValue: Default {
     fn zero() -> Self;
     fn one() -> Self;
 }

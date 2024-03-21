@@ -1,8 +1,6 @@
 use itertools::Itertools;
 
-use crate::{engine::{util::{err_if_dimension_mismatch, err_if_incorrect_dimensions, err_if_too_few_dimensions}, Engine, EngineError, EngineTensor, EngineTensorFactory}, helper::{shape, Interval, Position, Shape, Slice, Stride, VarArrayCompatible}};
-
-use super::{shared::im2col_2d, unit::UnitCompatible};
+use crate::{engine::{tensor::{factory::EngineTensorFactory, EngineTensor}, unit::UnitCompatible, Engine, EngineError}, engine_impl::{shared::im2col_2d, util::{err_if_dimension_mismatch, err_if_incorrect_dimensions, err_if_too_few_dimensions}}, helper::{shape, Shape, VarArrayCompatible}};
 
 pub struct Basic {}
 
@@ -117,7 +115,7 @@ impl<T: UnitCompatible> Engine<T> for Basic {
 
 #[cfg(test)]
 mod test {
-    use crate::{engine::tensor::{generic::EngineTensorGeneric, Array}, helper::shape};
+    use crate::{engine_impl::tensor::array::Array, helper::shape};
 
     use super::*;
 

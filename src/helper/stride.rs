@@ -1,5 +1,3 @@
-use std::ops::Index;
-
 use crate::helper::Shape;
 
 use super::{VarArray, VarArrayCompatible, Unit};

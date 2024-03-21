@@ -1,13 +1,8 @@
 use std::iter;
 
-use num::Zero;
+use crate::{engine::{tensor::{factory::EngineTensorFactory, EngineTensor}, unit::UnitCompatible}, helper::{Interval, Position, Shape, Slice, Stride, VarArrayCompatible}};
 
-use crate::{
-    engine::tensor::padded::Padded,
-    helper::{Interval, Position, Shape, Slice, Stride, VarArrayCompatible},
-};
-
-use super::{tensor::{factory::EngineTensorFactory, Array, EngineTensor}, unit::UnitCompatible};
+use super::tensor::padded::Padded;
 
 //a: (batches, in_channels, img_y, img_x)
 //kernel_shape: (in_channels, k_y, k_x)
@@ -91,7 +86,7 @@ pub fn im2col_2d<T: UnitCompatible, E: EngineTensorFactory<Unit = T>>(
 
 #[cfg(test)]
 mod test {
-    use crate::engine::tensor::{generic::EngineTensorGeneric, Array};
+    use crate::engine_impl::tensor::array::Array;
 
     use super::*;
 

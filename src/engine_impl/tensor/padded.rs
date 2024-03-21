@@ -1,5 +1,6 @@
-use crate::{engine::unit::UnitCompatible, helper::{Position, Shape, Slice, VarArray, VarArrayCompatible}};
-use super::{extension::EmptyExtensionProvider, factory::EngineTensorFactory, generic::EngineTensorGeneric, iter::EngineTensorUnitIterator, Array, EngineTensor};
+use crate::{engine::{tensor::{extension::{EmptyExtensionProvider, ExtensionProvider}, factory::EngineTensorFactory, iter::EngineTensorUnitIterator, EngineTensor}, unit::UnitCompatible}, helper::{Position, Shape, Slice, VarArray, VarArrayCompatible}};
+
+use super::array::Array;
 
 pub trait AllowedPadded: UnitCompatible {}
 impl<T: UnitCompatible> AllowedPadded for T {}
@@ -71,8 +72,6 @@ impl<T: AllowedPadded> Padded<T> {
     }
 }
 
-impl<T: AllowedPadded> EngineTensorGeneric for Padded<T> {}
-
 impl<T: AllowedPadded> EngineTensor for Padded<T> {
     type Unit = T;
 
@@ -98,7 +97,7 @@ impl<T: AllowedPadded> EngineTensor for Padded<T> {
         }
     }
 
-    fn iter_units(&self) -> super::iter::EngineTensorUnitIterator<'_, Self::Unit> {
+    fn iter_units(&self) -> EngineTensorUnitIterator<'_, Self::Unit> {
         EngineTensorUnitIterator::new(self)
     }
 
@@ -116,6 +115,10 @@ impl<T: AllowedPadded> EngineTensor for Padded<T> {
 
             padding_val: self.padding_val,
         })
+    }
+
+    fn mat(&self) -> Box<dyn EngineTensor<Unit = Self::Unit>> {
+        Array::from_iter(self.iter_units(), self.shape().clone()).generic()
     }
 
     //We can handle slices but changing anything more drastic needs a deep copy
@@ -174,14 +177,14 @@ impl<T: AllowedPadded> EngineTensor for Padded<T> {
         })
     }
 
-    fn extensions(&self)-> Box<dyn super::extension::ExtensionProvider + '_> {
+    fn extensions(&self)-> Box<dyn ExtensionProvider + '_> {
         Box::new(EmptyExtensionProvider::from(self))
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::helper::{shape, varr};
+    use crate::{engine::tensor::factory::EngineTensorFactory, engine_impl::tensor::array::Array, helper::{shape, varr}};
 
     use super::*;
 

@@ -320,7 +320,7 @@ pub enum ComputationGraphError {
 mod test {
     use num::traits::Pow;
 
-    use crate::{engine::{basic::Basic, tensor::{generic::EngineTensorGeneric, Array}}, helper::Shape};
+    use crate::{engine_impl::{basic::Basic, tensor::array::Array}, helper::Shape};
 
     use super::*;
 
