@@ -8,6 +8,7 @@ pub struct Iter<'a> {
     pos: Position,
     until: &'a Position,
     bounds: &'a Shape,
+    is_done: bool,
 }
 
 impl<'a> Iter<'a> {
@@ -16,6 +17,7 @@ impl<'a> Iter<'a> {
             pos,
             until,
             bounds,
+            is_done: false,
         }
     }
 }
@@ -25,8 +27,12 @@ impl<'a> Iterator for Iter<'a> {
     type Item = Position;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.pos == *self.until {
+        if self.is_done {
             None
+        } else if self.pos == *self.until {
+            self.is_done = true;
+
+            Some(self.pos.clone())
         } else {
             self.pos.incdec_mut(self.bounds, 1).unwrap();
 

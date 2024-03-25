@@ -1,8 +1,12 @@
 use crate::helper::Shape;
 
+use self::iter::Iter;
+
 use super::{Position, VarArrayCompatible};
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub mod iter;
+
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Interval {
     start: Option<usize>,
     end: Option<usize>,
@@ -10,7 +14,10 @@ pub struct Interval {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub struct Slice(Box<[Interval]>);
+pub struct Slice {
+    intervals: Box<[Interval]>,
+    shape: Shape,
+}
 
 impl Interval {
     pub fn new(start: Option<usize>, end: Option<usize>, step: Option<usize>) -> Self {
@@ -93,24 +100,32 @@ impl Interval {
 }
 
 impl Slice {
-    pub fn new(data: Box<[Interval]>) -> Self {
-        Self(data)
+    pub fn new(intervals: Box<[Interval]>, shape: Shape) -> Self {
+        Self {
+            intervals,
+            shape,
+        }
     }
 
     pub fn as_boxed_slice(&self) -> &Box<[Interval]> {
-        &self.0
+        &self.intervals
     }
 
     pub fn as_mut_boxed_slice(&mut self) -> &mut Box<[Interval]> {
-        &mut self.0
+        &mut self.intervals
     }
 
-    pub fn inferred_shape(&self, shape: &Shape) -> Shape {
-        Shape::new(self.as_boxed_slice().iter().zip(shape.iter()).map(|(interval, dim)| interval.len(dim)).collect())
+    //Should be possible to have a different len to self.shape
+    pub fn inferred_shape(&self) -> Shape {
+        Shape::new(self.as_boxed_slice().iter().zip(self.shape.iter()).map(|(interval, dim)| interval.len(dim)).collect())
     }
 
-    pub fn len(&self, shape: &Shape) -> usize {
-        self.inferred_shape(shape).len()
+    pub fn len(&self) -> usize {
+        self.inferred_shape().len()
+    }
+
+    pub fn elements(&self) -> usize {
+        self.inferred_shape().elements()
     }
 
     pub fn start(&self) -> Position {
@@ -118,14 +133,12 @@ impl Slice {
     }
 
     //This is called last to differentiate between end which wouldn't be a valid position
-    pub fn last(&self, shape: &Shape) -> Position {
-        Position::new(self.as_boxed_slice().iter().zip(shape.iter()).map(|(interval, dim)| interval.end_index(dim).saturating_sub(1)).collect())
+    pub fn last(&self) -> Position {
+        Position::new(self.as_boxed_slice().iter().zip(self.shape.iter()).map(|(interval, dim)| interval.end_index(dim).saturating_sub(1)).collect())
     }
-}
 
-impl From<&[Interval]> for Slice {
-    fn from(value: &[Interval]) -> Self {
-        Self(Box::from(value))
+    pub fn iter(&self) -> Iter {
+        Iter::new(self)
     }
 }
 

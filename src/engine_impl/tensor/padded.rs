@@ -1,4 +1,4 @@
-use crate::{engine::{tensor::{extension::{EmptyExtensionProvider, ExtensionProvider}, factory::EngineTensorFactory, iter::EngineTensorUnitIterator, EngineTensor}, unit::UnitCompatible}, helper::{Position, Shape, Slice, VarArray, VarArrayCompatible}};
+use crate::{engine::{tensor::{extension::{EmptyExtensionProvider, ExtensionProvider}, factory::EngineTensorFactory, iter::EngineTensorUnitIterator, EngineTensor}, unit::UnitCompatible}, helper::{Interval, Position, Shape, Slice, VarArray, VarArrayCompatible}};
 
 use super::array::Array;
 
@@ -122,8 +122,10 @@ impl<T: AllowedPadded> EngineTensor for Padded<T> {
     }
 
     //We can handle slices but changing anything more drastic needs a deep copy
-    fn slice(&self, slice: &Slice) -> Box<dyn EngineTensor<Unit = Self::Unit>> {
-        let slice_shape = slice.inferred_shape(self.shape());
+    fn slice(&self, intervals: &[Interval]) -> Box<dyn EngineTensor<Unit = Self::Unit>> {
+        let slice = Slice::new(intervals.into(), self.shape().clone());
+
+        let slice_shape = slice.inferred_shape();
 
         let steps = VarArray::from_iter(slice.as_boxed_slice().iter().map(|int| int.step()));
 

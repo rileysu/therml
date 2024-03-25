@@ -80,6 +80,16 @@ impl From<&[usize]> for Position {
     }
 }
 
+macro_rules! position {
+    () => {
+        Position::from([].as_slice())
+    };
+    ($($x:expr),+) => {
+        Position::from([$($x),+].as_slice())
+    };
+}
+pub(crate) use position;
+
 #[derive(Error, Debug)]
 pub enum PositionError {
     #[error("Stride length was: {0}, expected: {1}")]

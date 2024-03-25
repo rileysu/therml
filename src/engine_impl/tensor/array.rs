@@ -11,7 +11,7 @@ use crate::{
         },
         unit::UnitCompatible,
     },
-    helper::{Position, Shape, Slice, Stride, VarArrayCompatible},
+    helper::{Interval, Position, Shape, Slice, Stride, VarArrayCompatible},
 };
 
 #[derive(Debug)]
@@ -90,12 +90,14 @@ impl<T: AllowedArray> EngineTensor for Array<T> {
         Array::from_iter(self.iter_units(), self.shape().clone()).generic()
     }
 
-    fn slice(&self, slice: &Slice) -> Box<dyn EngineTensor<Unit = T>> {
+    fn slice(&self, intervals: &[Interval]) -> Box<dyn EngineTensor<Unit = T>> {
+        let slice = Slice::new(intervals.into(), self.shape().clone());
+
         let offset = slice.start().tensor_index(&self.stride).unwrap();
 
         Box::from(Self {
             stride: self.stride.clone(),
-            shape: slice.inferred_shape(self.shape()),
+            shape: slice.inferred_shape(),
             data: self.data.clone(),
             offset,
         })

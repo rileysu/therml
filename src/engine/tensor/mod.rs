@@ -3,7 +3,7 @@ pub mod iter;
 pub mod builder;
 pub mod factory;
 
-use crate::helper::{Shape, Position, Slice, };
+use crate::helper::{Interval, Position, Shape, Slice };
 use self::extension::ExtensionProvider;
 use self::iter::EngineTensorUnitIterator;
 use std::fmt::Debug;
@@ -19,7 +19,7 @@ pub trait EngineTensor: Debug {
 
     fn clone(&self) -> Box<dyn EngineTensor<Unit = Self::Unit>>;
     fn mat(&self) -> Box<dyn EngineTensor<Unit = Self::Unit>>;
-    fn slice(&self, slice: &Slice) -> Box<dyn EngineTensor<Unit = Self::Unit>>;
+    fn slice(&self, intervals: &[Interval]) -> Box<dyn EngineTensor<Unit = Self::Unit>>;
     fn reshape(&self, shape: &Shape) -> Box<dyn EngineTensor<Unit = Self::Unit>>;
     fn broadcast_splice(&self, pos: usize, sub: &[usize]) -> Box<dyn EngineTensor<Unit = Self::Unit>>;
 

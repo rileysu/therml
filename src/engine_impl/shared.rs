@@ -48,7 +48,7 @@ pub fn im2col_2d<T: UnitCompatible, E: EngineTensorFactory<Unit = T>>(
 
     for y in 0..out_y {
         for x in 0..out_x {
-            let grouped_patches = a_padded.slice(&Slice::from(
+            let grouped_patches = a_padded.slice(
                 [
                     Interval::all(),
                     Interval::all(),
@@ -56,20 +56,20 @@ pub fn im2col_2d<T: UnitCompatible, E: EngineTensorFactory<Unit = T>>(
                     Interval::between_with_step(x, x + k_x, stride),
                 ]
                 .as_slice(),
-            ));
+            );
 
             let grouped_patches = grouped_patches.reshape(&grouped_patches_shape);
 
             for batch in 0..batches {
                 for channel in 0..in_channels {
-                    let patch = grouped_patches.slice(&Slice::from(
+                    let patch = grouped_patches.slice(
                         [
                             Interval::only(batch),
                             Interval::only(channel),
                             Interval::all(),
                         ]
                         .as_slice(),
-                    ));
+                    );
 
                     let start_index = Position::from([batch, channel, y, x, 0].as_slice())
                         .tensor_index(&out_stride)
