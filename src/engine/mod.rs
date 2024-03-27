@@ -14,6 +14,10 @@ pub trait Engine<T: UnitCompatible> {
     fn abs<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
     fn neg<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
 
+    fn relu<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
+    fn leaky_relu<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>, alpha: f32) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
+    fn sigmoid<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
+
     //Pointwise Double
     fn add<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>, b: &dyn EngineTensor<Unit = T>) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
     fn sub<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>, b: &dyn EngineTensor<Unit = T>) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
@@ -33,10 +37,12 @@ pub enum EngineError {
     ShapeMismatch(Shape, Shape),
     #[error("The dimension {0} does not match expected {1}")]
     DimensionMismatch(usize, usize),
+    #[error("The dimensions {0:?} do not match expected {1:?}")]
+    DimensionsMismatch(Box<[usize]>, Box<[usize]>),
     #[error("The dimension {0} does not meet at least {1}")]
     NotEnoughDimensions(usize, usize),
     #[error("Got {0} dimensions but expected {1}")]
-    DimensionsMismatch(usize, usize),
+    NumDimensionsMismatch(usize, usize),
     #[error("Position operation failed: {0}")]
     Tensor(#[from] PositionError),
     #[error("The operation is not supported on this data type")]

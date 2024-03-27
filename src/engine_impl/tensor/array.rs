@@ -172,6 +172,10 @@ impl<T: AllowedArray> EngineTensorFactory for Array<T> {
             offset: 0,
         }
     }
+    
+    fn builder(shape: Shape, init: T) -> impl EngineTensorBuilder<Unit = Self::Unit> {
+        ArrayBuilder::new(shape, init)
+    }
 }
 
 struct ArrayBuilder<T: AllowedArray> {
@@ -183,21 +187,28 @@ impl<T: AllowedArray> EngineTensorBuilder for ArrayBuilder<T> {
     type Unit = T;
     type Tensor = Array<Self::Unit>;
 
-    fn new(shape: Shape) -> Self {
+    fn new(shape: Shape, init: Self::Unit) -> Self {
         let elements = shape.elements();
 
         Self {
             shape,
-            data: Vec::from_iter(iter::repeat(T::default()).take(elements)),
+            data: Vec::from_iter(iter::repeat(init).take(elements)),
         }
     }
 
-    fn splice<R: std::ops::RangeBounds<usize>, I: IntoIterator<Item = Self::Unit>>(
-        &mut self,
-        range: R,
-        replace_with: I,
-    ) {
-        self.data.splice(range, replace_with);
+    fn splice_slice<I: IntoIterator<Item = Self::Unit>>(&mut self, intervals: &[Interval], replace_with: I) {
+        let slice = Slice::new(intervals.into(), self.shape.clone());
+        let default_stride = Stride::default_from_shape(&self.shape);
+
+        for (pos, replace) in slice.iter().zip(replace_with) {
+            *self.data.get_mut(pos.tensor_index(&default_stride).unwrap()).unwrap() = replace;
+        }
+    }
+    
+    fn splice_between_positions<I: IntoIterator<Item = Self::Unit>>(&mut self, start: &Position, last: &Position, replace_with: I) {
+        let default_stride = Stride::default_from_shape(&self.shape);
+
+        self.data.splice((start.tensor_index(&default_stride).unwrap())..=(last.tensor_index(&default_stride).unwrap()), replace_with);
     }
 
     fn construct(self) -> Self::Tensor {

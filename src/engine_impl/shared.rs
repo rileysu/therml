@@ -1,6 +1,4 @@
-use std::iter;
-
-use crate::{engine::{tensor::{factory::EngineTensorFactory, EngineTensor}, unit::UnitCompatible}, helper::{Interval, Position, Shape, Slice, Stride, VarArrayCompatible}};
+use crate::{engine::{tensor::{builder::EngineTensorBuilder, factory::EngineTensorFactory, EngineTensor}, unit::UnitCompatible}, helper::{position, Interval, Position, Shape, Slice, Stride, VarArrayCompatible}};
 
 use super::tensor::padded::Padded;
 
@@ -35,7 +33,7 @@ pub fn im2col_2d<T: UnitCompatible, E: EngineTensorFactory<Unit = T>>(
     let patch_len = k_y * k_x;
 
     let out_shape = Shape::from([batches, in_channels, out_y, out_x, patch_len].as_slice());
-    let out_stride = Stride::default_from_shape(&out_shape);
+    //let out_stride = Stride::default_from_shape(&out_shape);
 
     //let final_img_dims = Shape::new(kernel_shape.iter().zip(img_dims.iter()).map(|(k_d, a_d)| (a_d + 2 * padding - k_d) / stride + 1).collect());
 
@@ -43,8 +41,10 @@ pub fn im2col_2d<T: UnitCompatible, E: EngineTensorFactory<Unit = T>>(
 
     //Buffer used for output
 
-    let mut buffer = Vec::<T>::from_iter(iter::repeat(T::zero()).take(out_shape.elements()));
-    buffer.shrink_to_fit();
+    //let mut buffer = Vec::<T>::from_iter(iter::repeat(T::zero()).take(out_shape.elements()));
+    //buffer.shrink_to_fit();
+
+    let mut builder = E::builder(out_shape.clone(), T::default());
 
     for y in 0..out_y {
         for x in 0..out_x {
@@ -63,25 +63,30 @@ pub fn im2col_2d<T: UnitCompatible, E: EngineTensorFactory<Unit = T>>(
             for batch in 0..batches {
                 for channel in 0..in_channels {
                     let patch = grouped_patches.slice(
-                        [
+                        &[
                             Interval::only(batch),
                             Interval::only(channel),
                             Interval::all(),
-                        ]
-                        .as_slice(),
+                        ],
                     );
 
-                    let start_index = Position::from([batch, channel, y, x, 0].as_slice())
-                        .tensor_index(&out_stride)
-                        .unwrap();
+                    //let start_index = Position::from([batch, channel, y, x, 0].as_slice())
+                    //    .tensor_index(&out_stride)
+                    //    .unwrap();
 
-                    buffer.splice(start_index..(start_index + patch_len), patch.iter_units());
+                    //buffer.splice(start_index..(start_index + patch_len), patch.iter_units());
+
+                    let start_pos = position![batch, channel, y, x, 0];
+                    let last_pos = position![batch, channel, y, x, patch_len - 1];
+                    builder.splice_between_positions(&start_pos, &last_pos, patch.iter_units());
                 }
             }
         }
     }
 
-    E::from_slice(buffer.as_slice(), out_shape).generic()
+    //E::from_slice(buffer.as_slice(), out_shape).generic()
+
+    builder.construct().generic()
 }
 
 #[cfg(test)]

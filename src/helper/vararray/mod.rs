@@ -220,7 +220,11 @@ impl VarArray {
         }
     }
 
-    pub fn pointwise_two<F: Fn(Unit, Unit) -> Unit>(&self, rhs: &VarArray, op: F) -> Result<VarArray, VarArrayError> {
+    pub fn concat(first: &Self, second: &Self) -> Self {
+        VarArray::from_iter(first.iter().chain(second.iter()))
+    }
+
+    pub fn pointwise_two<F: Fn(Unit, Unit) -> Unit>(&self, rhs: &Self, op: F) -> Result<VarArray, VarArrayError> {
         match self {
             VarArray::Zero(_) => match rhs {
                 VarArray::Zero(_) => Ok(VarArray::Zero([])),

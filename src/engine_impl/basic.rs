@@ -1,6 +1,6 @@
 use itertools::Itertools;
 
-use crate::{engine::{tensor::{factory::EngineTensorFactory, EngineTensor}, unit::UnitCompatible, Engine, EngineError}, engine_impl::{shared::im2col_2d, util::{err_if_dimension_mismatch, err_if_incorrect_dimensions, err_if_too_few_dimensions}}, helper::{shape, Shape, VarArrayCompatible}};
+use crate::{engine::{tensor::{factory::EngineTensorFactory, EngineTensor}, unit::UnitCompatible, Engine, EngineError}, engine_impl::{shared::im2col_2d, util::{err_if_dimension_mismatch, err_if_dimensions_mistmatch, err_if_incorrect_num_dimensions, err_if_too_few_dimensions}}, helper::{shape, varr, Shape, VarArray, VarArrayCompatible}};
 
 pub struct Basic {}
 
@@ -13,6 +13,22 @@ impl<T: UnitCompatible> Engine<T> for Basic {
 
     fn neg<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>) -> Result<Box<dyn EngineTensor<Unit = T>>, crate::engine::EngineError> {
         Ok(E::from_iter(a.iter_units().map(|x| x.neg()), a.shape().clone()).generic())
+    }
+
+    fn relu<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError> {
+        Ok(E::from_iter(a.iter_units().map(|x: T| if x > T::zero() { x } else { T::zero() }), a.shape().clone()).generic())
+    }
+    
+    fn leaky_relu<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>, alpha: f32) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError> {
+        Ok(E::from_iter(a.iter_units().map(|x: T| if x > T::zero() { x } else { x.scale_single(alpha) }), a.shape().clone()).generic())
+    }
+    
+    fn sigmoid<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError> {
+        Ok(E::from_iter(a.iter_units().map(|x: T| {
+            let x_exp = x.exp();
+
+            x_exp / (T::one() + x_exp)
+        }), a.shape().clone()).generic())
     }
 
     //Pointwise Double
@@ -49,19 +65,11 @@ impl<T: UnitCompatible> Engine<T> for Basic {
     }
 
     fn matmul<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>, b: &dyn EngineTensor<Unit = T>) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError> {
-        err_if_too_few_dimensions(a.shape(), 1)?;
-        err_if_too_few_dimensions(b.shape(), 1)?;
+        err_if_too_few_dimensions(a.shape(), 2)?;
+        err_if_too_few_dimensions(b.shape(), 2)?;
 
         let mut a = a.clone();
         let mut b = b.clone();
-
-        if a.shape().len() < 2 {
-            a = a.broadcast_splice(0, &[1]);
-        }
-
-        if b.shape().len() < 2 {
-            b = b.broadcast_splice(0, &[1]);
-        }
 
         if a.shape().len() < b.shape().len() {
             a = a.broadcast_splice(0, &b.shape().as_slice()[0..(b.shape().len() - a.shape().len())]);
@@ -71,7 +79,12 @@ impl<T: UnitCompatible> Engine<T> for Basic {
             b = b.broadcast_splice(0, &a.shape().as_slice()[0..(a.shape().len() - b.shape().len())]);
         }
 
-        //a.reshape(shape)
+        err_if_dimensions_mistmatch(&a.shape().as_slice()[0..(a.shape().len() - 2)], &b.shape().as_slice()[0..(b.shape().len() - 2)])?;
+        err_if_dimension_mismatch(a.shape().get(a.shape().len() - 1).unwrap(), b.shape().get(b.shape().len() - 2).unwrap())?;
+
+        let out_shape = Shape::new(VarArray::concat(&VarArray::from(&a.shape().as_slice()[0..(a.shape().len() - 2)]), &varr![a.shape().get(a.shape().len() - 2).unwrap(), b.shape().get(b.shape().len() - 1).unwrap()]));
+
+        let builder = E::builder(out_shape, T::default());
 
         todo!()
     }
@@ -80,8 +93,8 @@ impl<T: UnitCompatible> Engine<T> for Basic {
     //a: (batches, in_channels, y, x)
     //kernel: (out_channels, in_channels, k_y, k_x)
     fn conv2d<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>, kernel: &dyn EngineTensor<Unit = T>, padding: usize, stride: usize) -> Result<Box<dyn EngineTensor<Unit = T>>, crate::engine::EngineError> {
-        err_if_incorrect_dimensions(a.shape(), 4)?;
-        err_if_incorrect_dimensions(kernel.shape(), 4)?;
+        err_if_incorrect_num_dimensions(a.shape(), 4)?;
+        err_if_incorrect_num_dimensions(kernel.shape(), 4)?;
         err_if_dimension_mismatch(a.shape().get(1).unwrap(), kernel.shape().get(1).unwrap())?;
 
         let batches = a.shape().get(0).unwrap();

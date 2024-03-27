@@ -1,16 +1,15 @@
-use std::ops::RangeBounds;
+use crate::{engine::unit::UnitCompatible, helper::{Interval, Position, Shape}};
 
-use crate::{engine::unit::UnitCompatible, helper::Shape};
-
-use super::EngineTensor;
+use super::{factory::EngineTensorFactory, EngineTensor};
 
 pub trait EngineTensorBuilder {
     type Unit: UnitCompatible;
-    type Tensor: EngineTensor;
+    type Tensor: EngineTensor<Unit = Self::Unit> + EngineTensorFactory;
 
-    fn new(shape: Shape) -> Self;
+    fn new(shape: Shape, init: Self::Unit) -> Self;
 
-    fn splice<R: RangeBounds<usize>, I: IntoIterator<Item = Self::Unit>>(&mut self, range: R, replace_with: I);
+    fn splice_slice<I: IntoIterator<Item = Self::Unit>>(&mut self, intervals: &[Interval], replace_with: I);
+    fn splice_between_positions<I: IntoIterator<Item = Self::Unit>>(&mut self, start: &Position, last: &Position, replace_with: I);
 
     fn construct(self) -> Self::Tensor;
 }

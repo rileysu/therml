@@ -8,13 +8,13 @@ pub fn return_if_matched_shape<T>(a: &Shape, b: &Shape, out: T) -> Result<T, Eng
     }
 }
 
-pub fn err_if_incorrect_dimensions(a: &Shape, expected_dims: usize) -> Result<(), EngineError> {
+pub fn err_if_incorrect_num_dimensions(a: &Shape, expected_dims: usize) -> Result<(), EngineError> {
     let a_dims = a.len();
 
     if a_dims == expected_dims {
         Ok(())
     } else {
-        Err(EngineError::DimensionsMismatch(a_dims, expected_dims))
+        Err(EngineError::NumDimensionsMismatch(a_dims, expected_dims))
     }
 }
 
@@ -33,5 +33,13 @@ pub fn err_if_dimension_mismatch(provided_dim: usize, expected_dim: usize) -> Re
         Ok(())
     } else {
         Err(EngineError::DimensionMismatch(provided_dim, expected_dim))
+    }
+}
+
+pub fn err_if_dimensions_mistmatch(provided_dims: &[usize], expected_dims: &[usize]) -> Result<(), EngineError> {
+    if provided_dims == expected_dims {
+        Ok(())
+    } else {
+        Err(EngineError::DimensionsMismatch(provided_dims.into(), expected_dims.into()))
     }
 }

@@ -35,8 +35,10 @@ impl<'a> Iterator for Iter<'a> {
         } else if self.pos == self.until {
             self.is_done = true;
 
+            //Slow!
             Some(self.pos.add(&self.starts).unwrap())
         } else {
+            //Slow!
             let out = self.pos.add(&self.starts).unwrap();
 
             self.pos.incdec_mut(&self.slice_shape, 1).unwrap();

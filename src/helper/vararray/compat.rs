@@ -23,6 +23,9 @@ pub trait VarArrayCompatible: Sized {
     fn as_mut_slice(&mut self) -> &mut [usize] {
         self.vararray_mut().as_mut_slice()
     }
+    fn concat(first: &Self, second: &Self) -> Self {
+        Self::concat(first, second)
+    }
     fn add(&self, rhs: &impl VarArrayCompatible) -> Result<Self, VarArrayError> {
         Ok(Self::new(self.vararray().add(rhs.vararray())?))
     }
