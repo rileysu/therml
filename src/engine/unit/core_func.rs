@@ -1,8 +1,8 @@
 use std::{iter::{Product, Sum}, ops::{Add, Div, Mul, Rem, Sub}};
 
-use super::{core_value::CoreValue, exponential_op::ExponentialOp, Base};
+use super::{core_value::CoreValue, exponential_op::ExponentialOp, scale::Scale, Base};
 
-pub trait CoreFunc: CoreValue + ExponentialOp + Add<Output = Self>
+pub trait CoreFunc: CoreValue + ExponentialOp + Scale + Add<Output = Self>
 + Sub<Output = Self>
 + Mul<Output = Self>
 + Div<Output = Self>
@@ -16,8 +16,8 @@ pub trait CoreFunc: CoreValue + ExponentialOp + Add<Output = Self>
     fn relu(self) -> Self {
         if self > Self::zero() { self } else { Self::zero() }
     }
-    fn leaky_relu(self) -> Self {
-        if self > Self::zero() { self } else { Self::zero() }
+    fn leaky_relu(self, alpha: f64) -> Self {
+        if self > Self::zero() { self } else { self.scale_double(alpha) }
     }
     fn sigmoid(self) -> Self {
         let exp = self.exp();

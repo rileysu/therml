@@ -1,7 +1,9 @@
+use std::iter;
+
 use itertools::Itertools;
 
-use crate::{engine::{tensor::{factory::EngineTensorFactory, EngineTensor}, unit::UnitCompatible, Engine, EngineError}, engine_impl::{shared::im2col_2d, util::{err_if_dimension_mismatch, err_if_dimensions_mistmatch, err_if_incorrect_num_dimensions, err_if_too_few_dimensions}}, helper::{shape, varr, Shape, VarArray, VarArrayCompatible}};
-
+use crate::{engine::{tensor::{factory::EngineTensorFactory, EngineTensor}, unit::UnitCompatible, Engine, EngineError}, engine_impl::{shared::im2col_2d, util::{err_if_dimension_mismatch, err_if_dimensions_mistmatch, err_if_incorrect_num_dimensions, err_if_too_few_dimensions}}, helper::{shape, varr, Interval, Shape, VarArray, VarArrayCompatible}};
+use crate::engine::tensor::builder::EngineTensorBuilder;
 pub struct Basic {}
 
 impl<T: UnitCompatible> Engine<T> for Basic {
@@ -19,16 +21,12 @@ impl<T: UnitCompatible> Engine<T> for Basic {
         Ok(E::from_iter(a.iter_units().map(|x: T| if x > T::zero() { x } else { T::zero() }), a.shape().clone()).generic())
     }
     
-    fn leaky_relu<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>, alpha: f32) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError> {
-        Ok(E::from_iter(a.iter_units().map(|x: T| if x > T::zero() { x } else { x.scale_single(alpha) }), a.shape().clone()).generic())
+    fn leaky_relu<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>, alpha: f64) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError> {
+        Ok(E::from_iter(a.iter_units().map(|x: T| x.leaky_relu(alpha)), a.shape().clone()).generic())
     }
     
     fn sigmoid<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError> {
-        Ok(E::from_iter(a.iter_units().map(|x: T| {
-            let x_exp = x.exp();
-
-            x_exp / (T::one() + x_exp)
-        }), a.shape().clone()).generic())
+        Ok(E::from_iter(a.iter_units().map(|x: T| x.sigmoid()), a.shape().clone()).generic())
     }
 
     //Pointwise Double
@@ -79,14 +77,61 @@ impl<T: UnitCompatible> Engine<T> for Basic {
             b = b.broadcast_splice(0, &a.shape().as_slice()[0..(a.shape().len() - b.shape().len())]);
         }
 
-        err_if_dimensions_mistmatch(&a.shape().as_slice()[0..(a.shape().len() - 2)], &b.shape().as_slice()[0..(b.shape().len() - 2)])?;
-        err_if_dimension_mismatch(a.shape().get(a.shape().len() - 1).unwrap(), b.shape().get(b.shape().len() - 2).unwrap())?;
+        let out_rows = a.shape().get(a.shape().len() - 2).unwrap();
+        let out_columns = b.shape().get(b.shape().len() - 1).unwrap();
 
-        let out_shape = Shape::new(VarArray::concat(&VarArray::from(&a.shape().as_slice()[0..(a.shape().len() - 2)]), &varr![a.shape().get(a.shape().len() - 2).unwrap(), b.shape().get(b.shape().len() - 1).unwrap()]));
+        let a_batches_shape = Shape::from(&a.shape().as_slice()[0..(a.shape().len() - 2)]);
+        let b_batches_shape = Shape::from(&b.shape().as_slice()[0..(b.shape().len() - 2)]);
 
-        let builder = E::builder(out_shape, T::default());
+        let a_columns = a.shape().get(a.shape().len() - 1).unwrap();
+        let b_rows = b.shape().get(b.shape().len() - 2).unwrap();
 
-        todo!()
+        err_if_dimensions_mistmatch(a_batches_shape.as_slice(), b_batches_shape.as_slice())?;
+        err_if_dimension_mismatch(a_columns, b_rows)?;
+
+        let out_shape = Shape::new(VarArray::concat(a_batches_shape.vararray(), &varr![out_rows, out_columns]));
+
+        let mut builder = E::builder(out_shape, T::default());
+
+        let mut a_intervals = [
+            (0..a_batches_shape.len()).map(|_| Interval::all()).collect::<Vec<Interval>>().as_slice(), 
+            [Interval::only(out_rows), Interval::all()].as_slice()
+        ].concat().into_boxed_slice();
+        let a_intervals_row_index = a_intervals.len() - 2;
+
+        let mut b_intervals = [
+            (0..b_batches_shape.len()).map(|_| Interval::all()).collect::<Vec<Interval>>().as_slice(), 
+            [Interval::all(), Interval::only(out_columns)].as_slice()
+        ].concat().into_boxed_slice();
+        let b_intervals_column_index = b_intervals.len() - 1;
+
+        let mut out_intervals: Box<[Interval]> = [
+            (0..b_batches_shape.len()).map(|_| Interval::all()).collect::<Vec<Interval>>().as_slice(), 
+            [Interval::only(out_rows), Interval::only(out_columns)].as_slice()
+        ].concat().into_boxed_slice();
+        let out_intervals_row_index = out_intervals.len() - 2;
+        let out_intervals_column_index = out_intervals.len() - 1;
+
+        for row in 0..out_rows {
+            for column in 0..out_columns {
+                // sum(a(row, 1..n) * b(1..n, col))
+
+                *a_intervals.get_mut(a_intervals_row_index).unwrap() = Interval::only(row);
+                *b_intervals.get_mut(b_intervals_column_index).unwrap() = Interval::only(column);
+
+                let a_slice = a.slice(&a_intervals);
+                let b_slice = b.slice(&b_intervals);
+
+                let chunks = a_slice.iter_units().zip(b_slice.iter_units()).map(|(a_e, b_e)| a_e * b_e).chunks(a_columns);
+
+                *out_intervals.get_mut(out_intervals_row_index).unwrap() = Interval::only(row);
+                *out_intervals.get_mut(out_intervals_column_index).unwrap() = Interval::only(column);
+
+                builder.splice_slice(&out_intervals, chunks.into_iter().map(|c| c.sum()))
+            }
+        }
+
+        Ok(builder.construct().generic())
     }
 
     //Conv
@@ -141,5 +186,44 @@ mod test {
 
         println!("{:?}", res.shape());
         //println!("{:?}", res.iter_unit().collect::<Vec<f32>>());
+    }
+
+    #[test]
+    pub fn matmul_basic() {
+        let a = Array::from_slice(&[1., 2., 3., 4., 5., 6.], shape![2, 3]);
+        let b = Array::from_slice(&[10., 11., 20., 21., 30., 31.], shape![3, 2]);
+
+        let expected = Array::from_slice(&[140., 146., 320., 335.], shape![2, 2]);
+
+        let res = Basic::matmul::<Array<f32>>(&a, &b).unwrap();
+
+        assert!(res == expected.generic());
+
+        let a = Array::from_slice(&[1., 2., 3., 4., 5., 6., 2., 4., 6., 8., 10., 12.], shape![2, 2, 3]);
+        let b = Array::from_slice(&[10., 11., 20., 21., 30., 31.], shape![3, 2]);
+
+        let expected = Array::from_slice(&[140., 146., 320., 335., 280., 292., 640., 670.], shape![2, 2, 2]);
+
+        let res = Basic::matmul::<Array<f32>>(&a, &b).unwrap();
+
+        assert!(res == expected.generic());
+
+        let a = Array::from_slice(&[1., 2., 3., 4., 5., 6.], shape![2, 3]);
+        let b = Array::from_slice(&[10., 11., 20., 21., 30., 31., 20., 22., 40., 42., 60., 62.], shape![2, 3, 2]);
+
+        let expected = Array::from_slice(&[140., 146., 320., 335., 280., 292., 640., 670.], shape![2, 2, 2]);
+
+        let res = Basic::matmul::<Array<f32>>(&a, &b).unwrap();
+
+        assert!(res == expected.generic());
+
+        let a = Array::from_slice(&[1., 2., 3., 4., 5., 6., 2., 4., 6., 8., 10., 12.], shape![2, 2, 3]);
+        let b = Array::from_slice(&[10., 11., 20., 21., 30., 31., 20., 22., 40., 42., 60., 62.], shape![2, 3, 2]);
+
+        let expected = Array::from_slice(&[140., 146., 320., 335., 560., 584., 1280., 1340.], shape![2, 2, 2]);
+
+        let res = Basic::matmul::<Array<f32>>(&a, &b).unwrap();
+
+        assert!(res == expected.generic());
     }
 }
