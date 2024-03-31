@@ -1,6 +1,6 @@
 use crate::helper::Shape;
 
-use self::iter::Iter;
+use self::iter::SliceIter;
 
 use super::{Position, VarArrayCompatible};
 
@@ -137,8 +137,8 @@ impl Slice {
         Position::new(self.as_boxed_slice().iter().zip(self.shape.iter()).map(|(interval, dim)| interval.end_index(dim).saturating_sub(1)).collect())
     }
 
-    pub fn iter(&self) -> Iter {
-        Iter::new(self)
+    pub fn iter(&self) -> SliceIter {
+        SliceIter::new(self)
     }
 }
 

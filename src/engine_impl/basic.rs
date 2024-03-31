@@ -169,6 +169,49 @@ impl<T: UnitCompatible> Engine<T> for Basic {
         //(batches, out_channels, out_y, out_x)
         Ok(E::from_iter(out_data, shape![batches, out_channels, out_y, out_x]).generic())
     }
+    
+    fn batch_norm_running<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>, running_mean: &dyn EngineTensor<Unit = T>, running_var: &dyn EngineTensor<Unit = T>, weight: &dyn EngineTensor<Unit = T>, bias: &dyn EngineTensor<Unit = T>, momentum: f64, eps: f64) -> Result<Box<dyn EngineTensor<Unit = T>>, crate::engine::EngineError> {
+        let num_features = a.shape().get(1)?;
+
+        err_if_dimension_mismatch(running_mean.shape().get(0)?, num_features)?;
+        err_if_dimension_mismatch(running_var.shape().get(0)?, num_features)?;
+        err_if_dimension_mismatch(weight.shape().get(0)?, num_features)?;
+        err_if_dimension_mismatch(bias.shape().get(0)?, num_features)?;
+
+        todo!()
+    }
+    
+    fn batch_norm_no_running<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>, weight: &dyn EngineTensor<Unit = T>, bias: &dyn EngineTensor<Unit = T>, eps: f64) -> Result<Box<dyn EngineTensor<Unit = T>>, crate::engine::EngineError> {
+        let num_features = a.shape().get(1)?;
+
+        err_if_dimension_mismatch(weight.shape().get(0)?, num_features)?;
+        err_if_dimension_mismatch(bias.shape().get(0)?, num_features)?;
+
+        let mut builder = E::builder(a.shape().clone(), T::zero());
+
+        let mut channels_intervals = iter::repeat(Interval::all()).take(a.shape().len() - 2).collect::<Vec<_>>();
+        let channel_index = 1;
+
+        for channel in 0..num_features {
+            *channels_intervals.get_mut(channel_index).unwrap() = Interval::only(channel);
+
+            let channel_slice = a.slice(&channels_intervals);
+
+            let channel_sum: T = channel_slice.iter_units().sum();
+            let channel_elements = T::from(channel_slice.shape().elements());
+
+            let channel_mean = channel_sum / channel_elements; 
+            let channel_variance =  channel_slice.iter_units().map(|x| (x - channel_mean) * (x - channel_mean)).sum::<T>() / channel_elements;
+
+            let norms = channel_slice.iter_units().zip(weight.iter_units()).zip(bias.iter_units()).map(|((x, w), b)| {
+                ((x - channel_mean) / ((channel_variance).sqrt())) * w + b // + eps
+            });
+
+            builder.splice_slice(&channels_intervals, norms);
+        }
+
+        Ok(builder.construct().generic())
+    }
 }
 
 #[cfg(test)]

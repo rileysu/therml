@@ -1,4 +1,4 @@
-use crate::{engine::{tensor::{extension::{EmptyExtensionProvider, ExtensionProvider}, factory::EngineTensorFactory, iter::EngineTensorUnitIterator, EngineTensor}, unit::UnitCompatible}, helper::{Interval, Position, Shape, Slice, VarArray, VarArrayCompatible}};
+use crate::{engine::{tensor::{extension::{EmptyExtensionProvider, ExtensionProvider}, factory::EngineTensorFactory, sub_tensor_iter::EngineTensorSubTensorIterator, unit_iter::EngineTensorUnitIterator, EngineTensor}, unit::UnitCompatible}, helper::{Interval, Position, Shape, Slice, VarArray, VarArrayCompatible}};
 
 use super::array::Array;
 
@@ -101,6 +101,12 @@ impl<T: AllowedPadded> EngineTensor for Padded<T> {
         EngineTensorUnitIterator::new(self)
     }
 
+    fn iter_sub_tensor(&self, intervals: &[Interval]) -> EngineTensorSubTensorIterator<'_, Self::Unit> {
+        let slice = Slice::new(intervals.into(), self.shape().clone());
+
+        EngineTensorSubTensorIterator::new(self, slice).unwrap()
+    }
+
     fn clone(&self) -> Box<dyn EngineTensor<Unit = Self::Unit>> {
         Box::new(Self {
             tensor: self.tensor.clone(),
@@ -150,6 +156,11 @@ impl<T: AllowedPadded> EngineTensor for Padded<T> {
     //Reshaping might be possible without a deep copy
     fn reshape(&self, shape: &Shape) -> Box<dyn EngineTensor<Unit = Self::Unit>> {
         Array::from_iter(self.iter_units(), shape.clone()).generic()
+    }
+
+    //Lazy method but technically correct
+    fn trim(&self) -> Box<dyn EngineTensor<Unit = Self::Unit>> {
+        Array::from_iter(self.iter_units(), self.shape().clone()).generic().trim()
     }
 
     //This is possible with step = 0

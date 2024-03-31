@@ -47,6 +47,12 @@ impl From<&[usize]> for Shape {
     }
 }
 
+impl FromIterator<usize> for Shape {
+    fn from_iter<T: IntoIterator<Item = usize>>(iter: T) -> Self {
+        Self(VarArray::from_iter(iter))
+    }
+}
+
 impl Display for Shape {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let conv_sizes: Box<[String]> = self.iter().map(|x| x.to_string()).collect();

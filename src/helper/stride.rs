@@ -41,6 +41,12 @@ impl From<&[usize]> for Stride {
     }
 }
 
+impl FromIterator<usize> for Stride {
+    fn from_iter<T: IntoIterator<Item = usize>>(iter: T) -> Self {
+        Self(VarArray::from_iter(iter))
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

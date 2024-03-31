@@ -3,11 +3,7 @@ use std::{iter, sync::Arc};
 use crate::{
     engine::{
         tensor::{
-            builder::EngineTensorBuilder,
-            extension::{EmptyExtensionProvider, ExtensionProvider},
-            factory::EngineTensorFactory,
-            iter::EngineTensorUnitIterator,
-            EngineTensor,
+            builder::EngineTensorBuilder, extension::{EmptyExtensionProvider, ExtensionProvider}, factory::EngineTensorFactory, sub_tensor_iter::EngineTensorSubTensorIterator, unit_iter::EngineTensorUnitIterator, EngineTensor
         },
         unit::UnitCompatible,
     },
@@ -77,6 +73,12 @@ impl<T: AllowedArray> EngineTensor for Array<T> {
         EngineTensorUnitIterator::new(self)
     }
 
+    fn iter_sub_tensor(&self, intervals: &[Interval]) -> EngineTensorSubTensorIterator<'_, Self::Unit> {
+        let slice = Slice::new(intervals.into(), self.shape().clone());
+
+        EngineTensorSubTensorIterator::new(self, slice).unwrap()
+    }
+
     fn clone(&self) -> Box<dyn EngineTensor<Unit = Self::Unit>> {
         Box::new(Self {
             stride: self.stride.clone(),
@@ -120,6 +122,20 @@ impl<T: AllowedArray> EngineTensor for Array<T> {
         } else {
             todo!()
         }
+    }
+
+    fn trim(&self) -> Box<dyn EngineTensor<Unit = Self::Unit>> {
+        let removing_indices = self.shape().iter().enumerate().filter_map(|(ind, dim)| if dim > 1 { Some(ind) } else { None }).collect::<Box<[usize]>>();
+
+        let new_stride = Stride::from_iter(self.stride.iter().enumerate().filter_map(|(ind, s)| if removing_indices.contains(&ind) { None } else { Some(s) }));
+        let new_shape = Shape::from_iter(self.shape().iter().enumerate().filter_map(|(ind, dim)| if removing_indices.contains(&ind) { None } else { Some(dim) }));
+
+        Box::new(Array::<T> {
+            stride: new_stride,
+            shape: new_shape,
+            data: self.data.clone(),
+            offset: self.offset,
+        })
     }
 
     fn broadcast_splice(

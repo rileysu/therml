@@ -25,6 +25,9 @@ pub trait CoreFunc: CoreValue + ExponentialOp + Scale + Add<Output = Self>
         exp / (Self::one() + exp)
     }
 
+    //Gen
+    fn sqrt(self) -> Self;
+
     //Trig
     fn sin(self) -> Self;
     fn cos(self) -> Self;
@@ -46,6 +49,10 @@ pub trait CoreFunc: CoreValue + ExponentialOp + Scale + Add<Output = Self>
 macro_rules! core_func_float {
     ($unit:ty) => {
         impl CoreFunc for $unit {
+            fn sqrt(self) -> Self {
+                self.sqrt()
+            }
+
             fn sin(self) -> Self {
                 self.sin()
             }
@@ -100,6 +107,10 @@ macro_rules! core_func_float {
 macro_rules! core_func_int {
     ($unit:ty) => {
         impl CoreFunc for $unit {
+            fn sqrt(self) -> Self {
+                (self as f64).sqrt() as $unit
+            }
+
             fn sin(self) -> Self {
                 (self as f64).sin() as $unit
             }

@@ -5,7 +5,7 @@ use std::collections::{HashSet, HashMap};
 use slotmap::{SlotMap, new_key_type};
 use thiserror::Error;
 
-use crate::engine::{tensor::{factory::EngineTensorFactory, iter::EngineTensorUnitIterator, EngineTensor}, unit::UnitCompatible, Engine, EngineError};
+use crate::engine::{tensor::{factory::EngineTensorFactory, unit_iter::EngineTensorUnitIterator, EngineTensor}, unit::UnitCompatible, Engine, EngineError};
 
 use self::edge::Edge;
 

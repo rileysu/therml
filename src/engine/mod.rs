@@ -1,7 +1,7 @@
 pub mod tensor;
 pub mod unit;
 
-use crate::helper::{Shape, PositionError};
+use crate::helper::{PositionError, Shape, VarArrayError};
 use self::{tensor::{factory::EngineTensorFactory, EngineTensor}, unit::UnitCompatible};
 use thiserror::Error;
 
@@ -29,6 +29,10 @@ pub trait Engine<T: UnitCompatible> {
     //Conv
     fn conv2d<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>, kernel: &dyn EngineTensor<Unit = T>, padding: usize, stride: usize) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
     //fn im2col_2d<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>, kernel_shape: &Shape, padding: usize, stride: usize) -> Result<Box<dyn EngineTensor<Unit = T>>, EngineError>;
+
+    //Pool
+    fn batch_norm_no_running<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>, weight: &dyn EngineTensor<Unit = T>, bias: &dyn EngineTensor<Unit = T>, eps: f64) -> Result<Box<dyn EngineTensor<Unit = T>>, crate::engine::EngineError>;
+    fn batch_norm_running<E: EngineTensorFactory<Unit = T>>(a: &dyn EngineTensor<Unit = T>, running_mean: &dyn EngineTensor<Unit = T>, running_var: &dyn EngineTensor<Unit = T>, weight: &dyn EngineTensor<Unit = T>, bias: &dyn EngineTensor<Unit = T>, momentum: f64, eps: f64) -> Result<Box<dyn EngineTensor<Unit = T>>, crate::engine::EngineError>;
 }
 
 #[derive(Error, Debug)]
@@ -43,6 +47,8 @@ pub enum EngineError {
     NotEnoughDimensions(usize, usize),
     #[error("Got {0} dimensions but expected {1}")]
     NumDimensionsMismatch(usize, usize),
+    #[error("Vararray operation failed: {0}")]
+    VarArray(#[from] VarArrayError),
     #[error("Position operation failed: {0}")]
     Tensor(#[from] PositionError),
     #[error("The operation is not supported on this data type")]

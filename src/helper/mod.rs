@@ -2,7 +2,7 @@ mod inferred_shape;
 mod shape;
 mod stride;
 mod position;
-mod slice;
+pub mod slice;
 mod vararray;
 
 pub use shape::*;

@@ -2,17 +2,16 @@ use crate::helper::{Position, Shape, VarArrayCompatible};
 
 use super::Slice;
 
-pub struct Iter<'a> {
+pub struct SliceIter {
     pos: Position,
     until: Position,
     slice_shape: Shape,
     starts: Position,
-    slice: &'a Slice,
     is_done: bool,
 }
 
-impl<'a> Iter<'a> {
-    pub fn new(slice: &'a Slice) -> Iter<'a> {
+impl SliceIter {
+    pub fn new(slice: &Slice) -> SliceIter {
         let slice_shape = slice.inferred_shape();
 
         Self {
@@ -20,13 +19,12 @@ impl<'a> Iter<'a> {
             until: slice_shape.last(),
             slice_shape,
             starts: slice.start(), 
-            slice,
             is_done: false,
         }
     }
 }
 
-impl<'a> Iterator for Iter<'a> {
+impl Iterator for SliceIter {
     type Item = Position;
 
     fn next(&mut self) -> Option<Self::Item> {

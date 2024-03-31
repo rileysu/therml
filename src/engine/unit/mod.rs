@@ -4,8 +4,9 @@ use std::{
     ops::{Add, Div, Mul, Rem, Sub},
 };
 
-use self::{core_func::CoreFunc, core_value::CoreValue, exponential_op::ExponentialOp, scale::Scale, signed_op::SignedOp};
+use self::{core_cast::CoreCast, core_func::CoreFunc, core_value::CoreValue, exponential_op::ExponentialOp, scale::Scale, signed_op::SignedOp};
 
+pub mod core_cast;
 pub mod core_func;
 pub mod core_value;
 pub mod exponential_op;
@@ -18,6 +19,7 @@ impl<T: Sized + Copy + Debug + 'static> Base for T {}
 pub trait UnitCompatible:
     Base
     + SignedOp
+    + CoreCast<usize>
     + CoreFunc
     + CoreValue
     + ExponentialOp
@@ -36,6 +38,7 @@ pub trait UnitCompatible:
 impl<
         T: Base
             + SignedOp
+            + CoreCast<usize>
             + CoreFunc
             + CoreValue
             + ExponentialOp
